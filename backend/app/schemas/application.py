@@ -1,7 +1,8 @@
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
-from pydantic import Field, HttpUrl
+from pydantic import Field, field_validator
 
 from app.models.application import AppStatus
 from app.schemas.common import BaseSchema
@@ -16,6 +17,15 @@ class ApplicationBase(BaseSchema):
     healthcheck_url: str | None = None
     auth_mode: str = Field(default="platform_jwt")
     metadata_: dict = Field(default_factory=dict, alias="metadata")
+
+    @field_validator("metadata_", mode="before")
+    @classmethod
+    def ensure_dict(cls, v: Any) -> dict:
+        if v is None:
+            return {}
+        if isinstance(v, dict):
+            return v
+        return dict(v) if hasattr(v, "__iter__") else {}
 
 
 class ApplicationCreate(ApplicationBase):
@@ -71,6 +81,15 @@ class TenantApplicationBase(BaseSchema):
     """Base schema for tenant-application relationship."""
 
     config: dict = Field(default_factory=dict)
+
+    @field_validator("config", mode="before")
+    @classmethod
+    def ensure_config_dict(cls, v: Any) -> dict:
+        if v is None:
+            return {}
+        if isinstance(v, dict):
+            return v
+        return dict(v) if hasattr(v, "__iter__") else {}
 
 
 class TenantApplicationCreate(TenantApplicationBase):
