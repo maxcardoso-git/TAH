@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import apiClient, { PaginatedResponse } from '@/api/client'
 import { Tenant } from '@/types/tenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import {
   Card,
   CardContent,
@@ -13,13 +14,26 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Plus, Search, Building2, Users, Shield } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Plus, Search, Building2, Users, Shield, Loader2 } from 'lucide-react'
 import { formatRelativeDate } from '@/lib/utils'
 import { STATUS_COLORS } from '@/lib/constants'
 
 export function TenantsListPage() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [newTenantName, setNewTenantName] = useState('')
+  const [newTenantSlug, setNewTenantSlug] = useState('')
+  const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
     queryKey: ['tenants', page, search],
@@ -37,6 +51,41 @@ export function TenantsListPage() {
     },
   })
 
+  const createTenantMutation = useMutation({
+    mutationFn: async (data: { name: string; slug?: string }) => {
+      const response = await apiClient.post<Tenant>('/tenants', data)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenants'] })
+      setIsDialogOpen(false)
+      setNewTenantName('')
+      setNewTenantSlug('')
+    },
+  })
+
+  const handleCreateTenant = (e: React.FormEvent) => {
+    e.preventDefault()
+    createTenantMutation.mutate({
+      name: newTenantName,
+      slug: newTenantSlug || undefined,
+    })
+  }
+
+  const generateSlug = (text: string) => {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+  }
+
+  const handleNameChange = (name: string) => {
+    setNewTenantName(name)
+    if (!newTenantSlug || newTenantSlug === generateSlug(newTenantName)) {
+      setNewTenantSlug(generateSlug(name))
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -44,13 +93,67 @@ export function TenantsListPage() {
         <div>
           <h1 className="text-3xl font-bold">Tenants</h1>
           <p className="text-muted-foreground">
-            Gerencie as organizações da plataforma
+            Gerencie as organizacoes da plataforma
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Tenant
-        </Button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Tenant
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <form onSubmit={handleCreateTenant}>
+              <DialogHeader>
+                <DialogTitle>Criar Novo Tenant</DialogTitle>
+                <DialogDescription>
+                  Adicione uma nova organizacao a plataforma.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Nome</Label>
+                  <Input
+                    id="name"
+                    placeholder="Nome da organizacao"
+                    value={newTenantName}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="slug">Slug</Label>
+                  <Input
+                    id="slug"
+                    placeholder="nome-da-organizacao"
+                    value={newTenantSlug}
+                    onChange={(e) => setNewTenantSlug(e.target.value)}
+                    className="font-mono"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Identificador unico usado em URLs e integracoes
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={createTenantMutation.isPending}>
+                  {createTenantMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Criar Tenant
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Search */}
@@ -81,6 +184,18 @@ export function TenantsListPage() {
             </Card>
           ))}
         </div>
+      ) : data?.items.length === 0 ? (
+        <Card className="p-12 text-center">
+          <Building2 className="mx-auto h-12 w-12 text-muted-foreground" />
+          <h3 className="mt-4 text-lg font-semibold">Nenhum tenant encontrado</h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Crie seu primeiro tenant para comecar.
+          </p>
+          <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Criar Tenant
+          </Button>
+        </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {data?.items.map((tenant) => (
@@ -109,7 +224,7 @@ export function TenantsListPage() {
                     {tenant.users_count !== undefined && (
                       <div className="flex items-center gap-1">
                         <Users className="h-4 w-4" />
-                        <span>{tenant.users_count} usuários</span>
+                        <span>{tenant.users_count} usuarios</span>
                       </div>
                     )}
                     {tenant.roles_count !== undefined && (
@@ -141,7 +256,7 @@ export function TenantsListPage() {
             Anterior
           </Button>
           <span className="text-sm text-muted-foreground">
-            Página {page} de {data.pages}
+            Pagina {page} de {data.pages}
           </span>
           <Button
             variant="outline"
@@ -149,7 +264,7 @@ export function TenantsListPage() {
             disabled={page === data.pages}
             onClick={() => setPage(page + 1)}
           >
-            Próxima
+            Proxima
           </Button>
         </div>
       )}
