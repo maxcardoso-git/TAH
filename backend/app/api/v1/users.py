@@ -133,10 +133,18 @@ async def invite_user_to_tenant(
     await db.flush()
 
     # Return user with roles (empty for new invite)
-    user_data = UserWithRoles.model_validate(user)
-    user_data.tenant_status = UserTenantStatus.INVITED
-    user_data.roles = []
-    return user_data
+    return UserWithRoles(
+        id=user.id,
+        email=user.email,
+        display_name=user.display_name,
+        status=user.status,
+        external_subject=user.external_subject,
+        created_at=user.created_at,
+        updated_at=user.updated_at,
+        metadata=user.metadata_,
+        tenant_status=UserTenantStatus.INVITED,
+        roles=[],
+    )
 
 
 @router.get("/{user_id}/roles", response_model=list[UserRoleRead])
