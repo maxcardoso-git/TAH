@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '@/api/client'
-import { AppFeature, AppFeatureCreate, AppFeatureUpdate } from '@/types/app-feature'
+import { AppFeature, AppFeatureCreate, AppFeatureUpdate, FeatureLifecycle } from '@/types/app-feature'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -83,7 +83,7 @@ export function FeatureDialog({
   const [isActive, setIsActive] = useState(true)
   const [isPublic, setIsPublic] = useState(false)
   const [requiresOrg, setRequiresOrg] = useState(true)
-  const [lifecycle, setLifecycle] = useState('active')
+  const [lifecycle, setLifecycle] = useState<FeatureLifecycle>('active')
 
   // Reset form when feature changes
   useEffect(() => {
@@ -373,7 +373,7 @@ export function FeatureDialog({
             {isEditing && (
               <div className="grid gap-2">
                 <Label htmlFor="lifecycle">Lifecycle</Label>
-                <Select value={lifecycle} onValueChange={setLifecycle}>
+                <Select value={lifecycle} onValueChange={(v) => setLifecycle(v as FeatureLifecycle)}>
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Select lifecycle" />
                   </SelectTrigger>
