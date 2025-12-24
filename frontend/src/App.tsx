@@ -8,6 +8,7 @@ import { Shell } from '@/components/layout/shell'
 import { LoginPage } from '@/features/auth/pages/login'
 import { AcceptInvitePage } from '@/features/auth/pages/accept-invite'
 import { TenantsListPage } from '@/features/tenants/pages/tenants-list'
+import { TenantSelectPage } from '@/features/tenants/pages/tenant-select'
 import { TenantDetailPage } from '@/features/tenants/pages/tenant-detail'
 import { ApplicationsListPage } from '@/features/applications/pages/applications-list'
 import { ApplicationDetailPage } from '@/features/applications/pages/application-detail'
@@ -33,33 +34,44 @@ function ProtectedRoutes() {
 
   return (
     <TenantProvider>
-      <Shell>
-        <Routes>
-          {/* Redirect root to tenants */}
-          <Route path="/" element={<Navigate to="/tenants" replace />} />
+      <Routes>
+        {/* Tenant Selection (without Shell) */}
+        <Route path="/select-tenant" element={<TenantSelectPage />} />
 
-          {/* Tenants */}
-          <Route path="/tenants" element={<TenantsListPage />} />
-          <Route path="/tenants/:tenantId" element={<TenantDetailPage />} />
+        {/* Redirect root to tenant selection */}
+        <Route path="/" element={<Navigate to="/select-tenant" replace />} />
 
-          {/* Applications (global) */}
-          <Route path="/applications" element={<ApplicationsListPage />} />
-          <Route path="/applications/:applicationId" element={<ApplicationDetailPage />} />
+        {/* Routes with Shell */}
+        <Route
+          path="*"
+          element={
+            <Shell>
+              <Routes>
+                {/* Tenants */}
+                <Route path="/tenants" element={<TenantsListPage />} />
+                <Route path="/tenants/:tenantId" element={<TenantDetailPage />} />
 
-          {/* Roles (tenant-scoped) */}
-          <Route path="/tenants/:tenantId/roles" element={<RolesListPage />} />
-          <Route path="/tenants/:tenantId/roles/:roleId/permissions" element={<RolePermissionsPage />} />
+                {/* Applications (global) */}
+                <Route path="/applications" element={<ApplicationsListPage />} />
+                <Route path="/applications/:applicationId" element={<ApplicationDetailPage />} />
 
-          {/* Users (tenant-scoped) */}
-          <Route path="/tenants/:tenantId/users" element={<UsersListPage />} />
+                {/* Roles (tenant-scoped) */}
+                <Route path="/tenants/:tenantId/roles" element={<RolesListPage />} />
+                <Route path="/tenants/:tenantId/roles/:roleId/permissions" element={<RolePermissionsPage />} />
 
-          {/* Audit (tenant-scoped) */}
-          <Route path="/tenants/:tenantId/audit" element={<AuditLogPage />} />
+                {/* Users (tenant-scoped) */}
+                <Route path="/tenants/:tenantId/users" element={<UsersListPage />} />
 
-          {/* Catch all - redirect to tenants */}
-          <Route path="*" element={<Navigate to="/tenants" replace />} />
-        </Routes>
-      </Shell>
+                {/* Audit (tenant-scoped) */}
+                <Route path="/tenants/:tenantId/audit" element={<AuditLogPage />} />
+
+                {/* Catch all - redirect to tenant selection */}
+                <Route path="*" element={<Navigate to="/select-tenant" replace />} />
+              </Routes>
+            </Shell>
+          }
+        />
+      </Routes>
       <Toaster />
     </TenantProvider>
   )
