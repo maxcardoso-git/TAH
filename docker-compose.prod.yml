@@ -61,7 +61,7 @@ services:
         - VITE_API_URL=http://72.61.52.70:8001
     container_name: iam-frontend
     ports:
-      - "3001:80"
+      - "3050:80"
     depends_on:
       - backend
     restart: unless-stopped
