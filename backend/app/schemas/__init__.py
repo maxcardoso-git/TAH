@@ -1,4 +1,21 @@
 # Pydantic Schemas
+from app.schemas.app_feature import (
+    AppFeatureCreate,
+    AppFeatureRead,
+    AppFeatureUpdate,
+    AppFeaturesManifest,
+    ApplicationFeatures,
+    FeatureAction,
+    FeaturePermissionBatchUpdate,
+    FeaturePermissionMatrixRead,
+    FeatureSyncRequest,
+    FeatureSyncResponse,
+    FeatureSyncSummary,
+    FeatureWithActions,
+    ManifestFeature,
+    ManifestModule,
+    ModuleFeatures,
+)
 from app.schemas.application import (
     ApplicationCreate,
     ApplicationRead,
@@ -39,7 +56,23 @@ __all__ = [
     "TenantApplicationCreate",
     "TenantApplicationRead",
     "TenantApplicationUpdate",
-    # Permission
+    # App Features
+    "AppFeatureCreate",
+    "AppFeatureRead",
+    "AppFeatureUpdate",
+    "AppFeaturesManifest",
+    "ManifestModule",
+    "ManifestFeature",
+    "FeatureAction",
+    "FeatureWithActions",
+    "ModuleFeatures",
+    "ApplicationFeatures",
+    "FeaturePermissionMatrixRead",
+    "FeatureSyncRequest",
+    "FeatureSyncResponse",
+    "FeatureSyncSummary",
+    "FeaturePermissionBatchUpdate",
+    # Permission (legacy)
     "ExternalPermissionRead",
     "RolePermissionRead",
     "RolePermissionBatchUpdate",

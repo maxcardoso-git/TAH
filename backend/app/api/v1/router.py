@@ -1,6 +1,15 @@
 from fastapi import APIRouter
 
-from app.api.v1 import applications, audit, auth, permissions, roles, tenants, users
+from app.api.v1 import (
+    app_features,
+    applications,
+    audit,
+    auth,
+    permissions,
+    roles,
+    tenants,
+    users,
+)
 
 api_router = APIRouter()
 
@@ -21,6 +30,12 @@ api_router.include_router(
     applications.router,
     prefix="/applications",
     tags=["Applications"],
+)
+
+api_router.include_router(
+    app_features.router,
+    prefix="/applications/{application_id}/features",
+    tags=["App Features"],
 )
 
 api_router.include_router(

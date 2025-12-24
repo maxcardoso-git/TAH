@@ -5,6 +5,7 @@ export interface Application {
   name: string
   description: string | null
   base_url: string
+  features_manifest_url: string | null
   status: AppStatus
   current_version: string | null
   healthcheck_url: string | null
@@ -22,6 +23,7 @@ export interface ApplicationCreate {
   name: string
   description?: string
   base_url: string
+  features_manifest_url?: string
   healthcheck_url?: string
   auth_mode?: string
   metadata?: Record<string, unknown>
@@ -31,6 +33,7 @@ export interface ApplicationUpdate {
   name?: string
   description?: string
   base_url?: string
+  features_manifest_url?: string
   healthcheck_url?: string
   status?: AppStatus
   auth_mode?: string

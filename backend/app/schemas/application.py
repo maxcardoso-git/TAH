@@ -14,6 +14,10 @@ class ApplicationBase(BaseSchema):
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
     base_url: str = Field(..., description="Base URL for the application API")
+    features_manifest_url: str | None = Field(
+        None,
+        description="Custom URL for features manifest. If empty, uses {base_url}/api/v1/app-features/manifest",
+    )
     healthcheck_url: str | None = None
     auth_mode: str = Field(default="platform_jwt")
     metadata_: dict = Field(default_factory=dict, alias="metadata")
@@ -46,6 +50,7 @@ class ApplicationUpdate(BaseSchema):
     name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
     base_url: str | None = None
+    features_manifest_url: str | None = None
     healthcheck_url: str | None = None
     status: AppStatus | None = None
     auth_mode: str | None = None

@@ -1,4 +1,5 @@
 # SQLAlchemy Models
+from app.models.app_feature import AppFeature, FeatureLifecycle
 from app.models.application import Application, TenantApplication
 from app.models.audit_log import AuditLog
 from app.models.external_permission import ExternalPermission, PermissionSyncRun
@@ -12,6 +13,8 @@ __all__ = [
     "UserTenant",
     "Application",
     "TenantApplication",
+    "AppFeature",
+    "FeatureLifecycle",
     "ExternalPermission",
     "PermissionSyncRun",
     "Role",

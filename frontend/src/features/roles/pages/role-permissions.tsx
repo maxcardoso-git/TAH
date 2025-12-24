@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '@/api/client'
-import { PermissionMatrix, RolePermissionBatchUpdate } from '@/types/permission'
+import { FeaturePermissionMatrix, FeaturePermissionBatchUpdate } from '@/types/app-feature'
 import { Role } from '@/types/role'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Card,
   CardContent,
@@ -13,9 +14,36 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Save, RotateCcw, ChevronDown, ChevronRight } from 'lucide-react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Save, RotateCcw, ChevronDown, ChevronRight, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+
+// Common action types that appear as columns
+const ACTION_ORDER = ['read', 'create', 'update', 'delete', 'execute', 'publish', 'export']
+
+const ACTION_LABELS: Record<string, string> = {
+  read: 'Read',
+  create: 'Create',
+  update: 'Update',
+  delete: 'Delete',
+  execute: 'Execute',
+  publish: 'Publish',
+  export: 'Export',
+}
 
 export function RolePermissionsPage() {
   const { tenantId, roleId } = useParams<{ tenantId: string; roleId: string }>()
@@ -23,6 +51,7 @@ export function RolePermissionsPage() {
   const queryClient = useQueryClient()
 
   const [expandedApps, setExpandedApps] = useState<Set<string>>(new Set())
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set())
   const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(
     new Set()
   )
@@ -40,10 +69,10 @@ export function RolePermissionsPage() {
   })
 
   const { data: matrix, isLoading } = useQuery({
-    queryKey: ['permission-matrix', tenantId, roleId],
+    queryKey: ['feature-permission-matrix', tenantId, roleId],
     queryFn: async () => {
-      const response = await apiClient.get<PermissionMatrix>(
-        `/tenants/${tenantId}/roles/${roleId}/permissions/matrix`
+      const response = await apiClient.get<FeaturePermissionMatrix>(
+        `/tenants/${tenantId}/roles/${roleId}/permissions/feature-matrix`
       )
       // Initialize selected permissions from granted
       setSelectedPermissions(new Set(response.data.granted_permissions))
@@ -55,29 +84,27 @@ export function RolePermissionsPage() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       const original = new Set(matrix?.granted_permissions || [])
-      const grant: Array<{ application_id: string; permission_key: string }> = []
-      const revoke: Array<{ application_id: string; permission_key: string }> = []
+      const grant: string[] = []
+      const revoke: string[] = []
 
       // Find permissions to grant (in selected but not in original)
       selectedPermissions.forEach((key) => {
         if (!original.has(key)) {
-          const appId = findAppIdForPermission(key)
-          if (appId) grant.push({ application_id: appId, permission_key: key })
+          grant.push(key)
         }
       })
 
       // Find permissions to revoke (in original but not in selected)
       original.forEach((key) => {
         if (!selectedPermissions.has(key)) {
-          const appId = findAppIdForPermission(key)
-          if (appId) revoke.push({ application_id: appId, permission_key: key })
+          revoke.push(key)
         }
       })
 
-      const body: RolePermissionBatchUpdate = { grant, revoke }
+      const body: FeaturePermissionBatchUpdate = { grant, revoke }
 
       await apiClient.put(
-        `/tenants/${tenantId}/roles/${roleId}/permissions`,
+        `/tenants/${tenantId}/roles/${roleId}/permissions/features`,
         body
       )
     },
@@ -85,25 +112,13 @@ export function RolePermissionsPage() {
       toast({ title: 'Permissions saved successfully' })
       setHasChanges(false)
       queryClient.invalidateQueries({
-        queryKey: ['permission-matrix', tenantId, roleId],
+        queryKey: ['feature-permission-matrix', tenantId, roleId],
       })
     },
     onError: () => {
       toast({ title: 'Error saving permissions', variant: 'destructive' })
     },
   })
-
-  const findAppIdForPermission = (permissionKey: string): string | null => {
-    if (!matrix) return null
-    for (const app of matrix.applications) {
-      for (const module of app.modules) {
-        if (module.permissions.some((p) => p.permission_key === permissionKey)) {
-          return app.application_id
-        }
-      }
-    }
-    return null
-  }
 
   const toggleApp = (appId: string) => {
     const newExpanded = new Set(expandedApps)
@@ -113,6 +128,16 @@ export function RolePermissionsPage() {
       newExpanded.add(appId)
     }
     setExpandedApps(newExpanded)
+  }
+
+  const toggleModuleExpand = (moduleKey: string) => {
+    const newExpanded = new Set(expandedModules)
+    if (newExpanded.has(moduleKey)) {
+      newExpanded.delete(moduleKey)
+    } else {
+      newExpanded.add(moduleKey)
+    }
+    setExpandedModules(newExpanded)
   }
 
   const togglePermission = (permissionKey: string) => {
@@ -126,14 +151,28 @@ export function RolePermissionsPage() {
     setHasChanges(true)
   }
 
-  const toggleModule = (permissions: string[]) => {
-    const allSelected = permissions.every((p) => selectedPermissions.has(p))
+  const toggleFeatureAllActions = (featureId: string, actionKeys: string[]) => {
+    const allSelected = actionKeys.every((k) => selectedPermissions.has(k))
     const newSelected = new Set(selectedPermissions)
 
     if (allSelected) {
-      permissions.forEach((p) => newSelected.delete(p))
+      actionKeys.forEach((k) => newSelected.delete(k))
     } else {
-      permissions.forEach((p) => newSelected.add(p))
+      actionKeys.forEach((k) => newSelected.add(k))
+    }
+
+    setSelectedPermissions(newSelected)
+    setHasChanges(true)
+  }
+
+  const toggleModuleAllActions = (modulePermKeys: string[]) => {
+    const allSelected = modulePermKeys.every((k) => selectedPermissions.has(k))
+    const newSelected = new Set(selectedPermissions)
+
+    if (allSelected) {
+      modulePermKeys.forEach((k) => newSelected.delete(k))
+    } else {
+      modulePermKeys.forEach((k) => newSelected.add(k))
     }
 
     setSelectedPermissions(newSelected)
@@ -144,6 +183,31 @@ export function RolePermissionsPage() {
     setSelectedPermissions(new Set(matrix?.granted_permissions || []))
     setHasChanges(false)
   }
+
+  // Get all unique actions across all features for column headers
+  const getAllActions = () => {
+    const actions = new Set<string>()
+    matrix?.applications.forEach((app) => {
+      app.modules.forEach((module) => {
+        module.features.forEach((feature) => {
+          feature.actions.forEach((action) => {
+            actions.add(action.action)
+          })
+        })
+      })
+    })
+    // Return sorted by ACTION_ORDER, then alphabetically for any extras
+    return Array.from(actions).sort((a, b) => {
+      const aIndex = ACTION_ORDER.indexOf(a)
+      const bIndex = ACTION_ORDER.indexOf(b)
+      if (aIndex === -1 && bIndex === -1) return a.localeCompare(b)
+      if (aIndex === -1) return 1
+      if (bIndex === -1) return -1
+      return aIndex - bIndex
+    })
+  }
+
+  const allActions = getAllActions()
 
   if (isLoading) {
     return (
@@ -163,7 +227,7 @@ export function RolePermissionsPage() {
         <div>
           <h1 className="text-3xl font-bold">Role Permissions</h1>
           <p className="text-muted-foreground">
-            {role?.name} - Manage permissions assigned to this role
+            {role?.name} - Manage feature permissions assigned to this role
           </p>
         </div>
         <div className="flex gap-2">
@@ -194,9 +258,9 @@ export function RolePermissionsPage() {
       {/* Permission Matrix */}
       <Card>
         <CardHeader>
-          <CardTitle>Permissions Matrix</CardTitle>
+          <CardTitle>Feature Permissions Matrix</CardTitle>
           <CardDescription>
-            Select the permissions this role should have access to
+            Select the feature actions this role should have access to
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -206,106 +270,235 @@ export function RolePermissionsPage() {
             </p>
           ) : (
             <div className="space-y-4">
-              {matrix?.applications.map((app) => (
-                <div key={app.application_id} className="border rounded-lg">
-                  {/* App Header */}
-                  <button
-                    className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
-                    onClick={() => toggleApp(app.application_id)}
-                  >
-                    <div className="flex items-center gap-2">
-                      {expandedApps.has(app.application_id) ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                      <span className="font-medium">{app.application_name}</span>
-                      <Badge variant="outline" className="ml-2">
-                        {app.modules.reduce(
-                          (acc, m) => acc + m.permissions.length,
-                          0
-                        )}{' '}
-                        permissions
-                      </Badge>
-                    </div>
-                  </button>
+              {matrix?.applications.map((app) => {
+                // Count total permissions for this app
+                let totalPerms = 0
+                let grantedPerms = 0
+                app.modules.forEach((m) => {
+                  m.features.forEach((f) => {
+                    f.actions.forEach((a) => {
+                      totalPerms++
+                      if (selectedPermissions.has(a.permission_key)) {
+                        grantedPerms++
+                      }
+                    })
+                  })
+                })
 
-                  {/* Modules */}
-                  {expandedApps.has(app.application_id) && (
-                    <div className="border-t">
-                      {app.modules.map((module) => {
-                        const modulePermKeys = module.permissions.map(
-                          (p) => p.permission_key
-                        )
-                        const allSelected = modulePermKeys.every((k) =>
-                          selectedPermissions.has(k)
-                        )
-                        const someSelected = modulePermKeys.some((k) =>
-                          selectedPermissions.has(k)
-                        )
+                return (
+                  <div key={app.application_id} className="border rounded-lg">
+                    {/* App Header */}
+                    <button
+                      className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                      onClick={() => toggleApp(app.application_id)}
+                    >
+                      <div className="flex items-center gap-2">
+                        {expandedApps.has(app.application_id) ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                        <span className="font-medium">{app.application_name}</span>
+                        <Badge variant="outline" className="ml-2">
+                          {grantedPerms}/{totalPerms} permissions
+                        </Badge>
+                      </div>
+                    </button>
 
-                        return (
-                          <div key={module.module_key} className="border-b last:border-b-0">
-                            {/* Module Header */}
-                            <div className="flex items-center gap-3 p-3 bg-muted/30">
-                              <input
-                                type="checkbox"
-                                checked={allSelected}
-                                ref={(el) => {
-                                  if (el) el.indeterminate = someSelected && !allSelected
-                                }}
-                                onChange={() => toggleModule(modulePermKeys)}
-                                className="h-4 w-4 rounded border-gray-300"
-                              />
-                              <span className="font-medium text-sm">
-                                {module.module_name || module.module_key}
-                              </span>
-                            </div>
+                    {/* Modules with Feature Tables */}
+                    {expandedApps.has(app.application_id) && (
+                      <div className="border-t">
+                        {app.modules.map((module) => {
+                          // Get all permission keys for this module
+                          const modulePermKeys: string[] = []
+                          module.features.forEach((f) => {
+                            f.actions.forEach((a) => {
+                              modulePermKeys.push(a.permission_key)
+                            })
+                          })
 
-                            {/* Permissions */}
-                            <div className="divide-y">
-                              {module.permissions.map((perm) => (
-                                <label
-                                  key={perm.permission_key}
-                                  className={cn(
-                                    'flex items-center gap-3 p-3 pl-10 cursor-pointer hover:bg-muted/20 transition-colors',
-                                    selectedPermissions.has(perm.permission_key) &&
-                                      'bg-primary/5'
-                                  )}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedPermissions.has(
-                                      perm.permission_key
-                                    )}
-                                    onChange={() =>
-                                      togglePermission(perm.permission_key)
+                          const allModuleSelected = modulePermKeys.every((k) =>
+                            selectedPermissions.has(k)
+                          )
+                          const someModuleSelected = modulePermKeys.some((k) =>
+                            selectedPermissions.has(k)
+                          )
+
+                          const moduleExpandKey = `${app.application_id}:${module.module_key}`
+
+                          return (
+                            <div key={module.module_key} className="border-b last:border-b-0">
+                              {/* Module Header */}
+                              <div className="flex items-center gap-3 p-3 bg-muted/30">
+                                <Checkbox
+                                  checked={allModuleSelected}
+                                  ref={(el) => {
+                                    if (el) {
+                                      // Indeterminate state for partial selection
+                                      const input = el.querySelector('button')
+                                      if (input) {
+                                        (input as HTMLButtonElement).dataset.state =
+                                          someModuleSelected && !allModuleSelected ? 'indeterminate' :
+                                          allModuleSelected ? 'checked' : 'unchecked'
+                                      }
                                     }
-                                    className="h-4 w-4 rounded border-gray-300"
-                                  />
-                                  <div className="flex-1">
-                                    <p className="font-mono text-sm">
-                                      {perm.permission_key}
-                                    </p>
-                                    {perm.description && (
-                                      <p className="text-xs text-muted-foreground">
-                                        {perm.description}
-                                      </p>
-                                    )}
-                                  </div>
-                                  {perm.is_new && (
-                                    <Badge variant="success">NEW</Badge>
+                                  }}
+                                  onCheckedChange={() => toggleModuleAllActions(modulePermKeys)}
+                                />
+                                <button
+                                  className="flex items-center gap-2 flex-1 text-left"
+                                  onClick={() => toggleModuleExpand(moduleExpandKey)}
+                                >
+                                  {expandedModules.has(moduleExpandKey) ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4" />
                                   )}
-                                </label>
-                              ))}
+                                  <span className="font-medium text-sm">
+                                    {module.module_name || module.module_key}
+                                  </span>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {module.features.length} features
+                                  </Badge>
+                                </button>
+                              </div>
+
+                              {/* Features Table */}
+                              {expandedModules.has(moduleExpandKey) && (
+                                <div className="p-4">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead className="w-[40px]"></TableHead>
+                                        <TableHead className="min-w-[200px]">Feature</TableHead>
+                                        {allActions.map((action) => (
+                                          <TableHead
+                                            key={action}
+                                            className="w-[80px] text-center"
+                                          >
+                                            {ACTION_LABELS[action] || action}
+                                          </TableHead>
+                                        ))}
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {module.features.map((feature) => {
+                                        // Map actions by action type for easy lookup
+                                        const actionMap = new Map(
+                                          feature.actions.map((a) => [a.action, a])
+                                        )
+                                        const featurePermKeys = feature.actions.map(
+                                          (a) => a.permission_key
+                                        )
+                                        const allFeatureSelected = featurePermKeys.every(
+                                          (k) => selectedPermissions.has(k)
+                                        )
+
+                                        return (
+                                          <TableRow key={feature.id}>
+                                            <TableCell>
+                                              <Checkbox
+                                                checked={allFeatureSelected}
+                                                onCheckedChange={() =>
+                                                  toggleFeatureAllActions(
+                                                    feature.id,
+                                                    featurePermKeys
+                                                  )
+                                                }
+                                              />
+                                            </TableCell>
+                                            <TableCell>
+                                              <div className="flex items-center gap-2">
+                                                <span className="font-medium">
+                                                  {feature.name}
+                                                </span>
+                                                {feature.description && (
+                                                  <TooltipProvider>
+                                                    <Tooltip>
+                                                      <TooltipTrigger>
+                                                        <Info className="h-3 w-3 text-muted-foreground" />
+                                                      </TooltipTrigger>
+                                                      <TooltipContent>
+                                                        <p className="max-w-xs">
+                                                          {feature.description}
+                                                        </p>
+                                                      </TooltipContent>
+                                                    </Tooltip>
+                                                  </TooltipProvider>
+                                                )}
+                                                {feature.is_public && (
+                                                  <Badge
+                                                    variant="outline"
+                                                    className="text-xs"
+                                                  >
+                                                    Public
+                                                  </Badge>
+                                                )}
+                                                {feature.lifecycle === 'deprecated' && (
+                                                  <Badge
+                                                    variant="destructive"
+                                                    className="text-xs"
+                                                  >
+                                                    Deprecated
+                                                  </Badge>
+                                                )}
+                                              </div>
+                                              <p className="text-xs text-muted-foreground font-mono">
+                                                {feature.id}
+                                              </p>
+                                            </TableCell>
+                                            {allActions.map((action) => {
+                                              const actionData = actionMap.get(action)
+                                              if (!actionData) {
+                                                return (
+                                                  <TableCell
+                                                    key={action}
+                                                    className="text-center"
+                                                  >
+                                                    <span className="text-muted-foreground">
+                                                      -
+                                                    </span>
+                                                  </TableCell>
+                                                )
+                                              }
+                                              return (
+                                                <TableCell
+                                                  key={action}
+                                                  className="text-center"
+                                                >
+                                                  <Checkbox
+                                                    checked={selectedPermissions.has(
+                                                      actionData.permission_key
+                                                    )}
+                                                    onCheckedChange={() =>
+                                                      togglePermission(
+                                                        actionData.permission_key
+                                                      )
+                                                    }
+                                                    className={cn(
+                                                      selectedPermissions.has(
+                                                        actionData.permission_key
+                                                      ) && 'data-[state=checked]:bg-primary'
+                                                    )}
+                                                  />
+                                                </TableCell>
+                                              )
+                                            })}
+                                          </TableRow>
+                                        )
+                                      })}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              ))}
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </CardContent>

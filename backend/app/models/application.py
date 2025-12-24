@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 if TYPE_CHECKING:
+    from app.models.app_feature import AppFeature
     from app.models.external_permission import ExternalPermission
     from app.models.tenant import Tenant
 
@@ -30,6 +31,11 @@ class Application(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(String)
     base_url: Mapped[str] = mapped_column(String, nullable=False)
+    features_manifest_url: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+        comment="Custom URL for features manifest. If null, uses {base_url}/api/v1/app-features/manifest",
+    )
     status: Mapped[AppStatus] = mapped_column(
         Enum(
             AppStatus,
@@ -69,6 +75,11 @@ class Application(Base):
     )
     external_permissions: Mapped[list["ExternalPermission"]] = relationship(
         "ExternalPermission",
+        back_populates="application",
+        cascade="all, delete-orphan",
+    )
+    app_features: Mapped[list["AppFeature"]] = relationship(
+        "AppFeature",
         back_populates="application",
         cascade="all, delete-orphan",
     )
