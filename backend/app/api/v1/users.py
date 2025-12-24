@@ -73,9 +73,19 @@ async def list_tenant_users(
         roles_result = await db.execute(roles_query)
         roles = roles_result.scalars().all()
 
-        user_data = UserWithRoles.model_validate(ut.user)
-        user_data.tenant_status = ut.status
-        user_data.roles = [RoleSummary.model_validate(r) for r in roles]
+        user = ut.user
+        user_data = UserWithRoles(
+            id=user.id,
+            email=user.email,
+            display_name=user.display_name,
+            status=user.status,
+            external_subject=user.external_subject,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+            metadata=user.metadata_,
+            tenant_status=ut.status,
+            roles=[RoleSummary.model_validate(r) for r in roles],
+        )
         items.append(user_data)
 
     return PaginatedResponse.create(
