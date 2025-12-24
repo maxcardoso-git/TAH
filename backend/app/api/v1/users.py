@@ -1,3 +1,5 @@
+import secrets
+from datetime import datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
@@ -14,7 +16,7 @@ from app.models.user import User, UserRole, UserTenant, UserTenantStatus
 from app.schemas.common import PaginatedResponse
 from app.schemas.permission import EffectivePermissions
 from app.schemas.role import RoleSummary
-from app.schemas.user import UserInvite, UserRoleAssign, UserRoleRead, UserTenantRead, UserWithRoles
+from app.schemas.user import UserInvite, UserInviteResponse, UserRoleAssign, UserRoleRead, UserTenantRead, UserWithRoles
 
 router = APIRouter()
 
@@ -96,14 +98,14 @@ async def list_tenant_users(
     )
 
 
-@router.post("/invite", response_model=UserWithRoles, status_code=status.HTTP_201_CREATED)
+@router.post("/invite", response_model=UserInviteResponse, status_code=status.HTTP_201_CREATED)
 async def invite_user_to_tenant(
     db: DbSession,
     token: Annotated[TokenPayload, Depends(get_token_payload)],
     tenant_id: UUID,
     data: UserInvite,
 ):
-    """Invite a user to the tenant by email."""
+    """Invite a user to the tenant by email. Returns invite token for password setup."""
     # Check if user already exists
     existing_user = await db.scalar(
         select(User).where(User.email == data.email)
@@ -121,39 +123,44 @@ async def invite_user_to_tenant(
             raise ConflictError(detail=f"User {data.email} is already a member of this tenant")
         user = existing_user
     else:
-        # Create new user
+        # Create new user (without password - will be set on invite acceptance)
         user = User(
             email=data.email,
             display_name=data.display_name,
-            status="active",
+            status="pending",  # Pending until they set password
         )
         db.add(user)
         await db.flush()
         await db.refresh(user)
 
-    # Create tenant membership
+    # Generate invite token
+    invite_token = secrets.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(days=7)  # 7 days to accept
+
+    # Create tenant membership with invite token
     inviter_id = UUID(token.user_id) if token.user_id else None
     user_tenant = UserTenant(
         tenant_id=tenant_id,
         user_id=user.id,
         status=UserTenantStatus.INVITED,
         invited_by=inviter_id,
+        invite_token=invite_token,
+        invite_expires_at=expires_at,
     )
     db.add(user_tenant)
     await db.flush()
 
-    # Return user with roles (empty for new invite)
-    return UserWithRoles(
-        id=user.id,
+    # Build invite URL (frontend will handle this route)
+    invite_url = f"/accept-invite?token={invite_token}"
+
+    return UserInviteResponse(
+        user_id=user.id,
         email=user.email,
         display_name=user.display_name,
-        status=user.status,
-        external_subject=user.external_subject,
-        created_at=user.created_at,
-        updated_at=user.updated_at,
-        metadata=user.metadata_,
-        tenant_status=UserTenantStatus.INVITED,
-        roles=[],
+        tenant_id=tenant_id,
+        invite_token=invite_token,
+        invite_url=invite_url,
+        expires_at=expires_at,
     )
 
 

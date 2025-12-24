@@ -17,6 +17,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -28,13 +29,14 @@ export function LoginPage() {
     try {
       const response = await apiClient.post('/auth/login', {
         email,
+        password,
       })
 
       login(response.data.access_token)
       navigate('/tenants')
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || 'Erro ao fazer login. Verifique o email.')
+      setError(error.response?.data?.detail || 'Erro ao fazer login. Verifique suas credenciais.')
     } finally {
       setIsLoading(false)
     }
@@ -85,14 +87,25 @@ export function LoginPage() {
                 required
                 autoFocus
               />
-              <p className="text-xs text-muted-foreground">
-                Use o email de um usuário cadastrado no sistema
-              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-medium">
+                Senha
+              </label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Digite sua senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
 
             {error && (
               <div className="flex items-center gap-2 p-3 text-sm text-red-500 bg-red-50 rounded-md">
-                <AlertCircle className="h-4 w-4" />
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
                 {error}
               </div>
             )}
@@ -125,7 +138,7 @@ export function LoginPage() {
               Entrar como Demo
             </Button>
             <p className="text-xs text-center text-muted-foreground mt-2">
-              Cria um usuário demo com acesso admin
+              Cria um usuario demo com acesso admin
             </p>
           </div>
         </CardContent>

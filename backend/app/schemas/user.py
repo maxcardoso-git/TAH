@@ -69,6 +69,18 @@ class UserInvite(BaseSchema):
     display_name: str | None = Field(None, description="Nome de exibicao")
 
 
+class UserInviteResponse(BaseSchema):
+    """Response from invite with token for setting password."""
+
+    user_id: UUID
+    email: str
+    display_name: str | None
+    tenant_id: UUID
+    invite_token: str
+    invite_url: str
+    expires_at: datetime
+
+
 class UserTenantRead(UserTenantBase):
     """Schema for reading user-tenant membership."""
 

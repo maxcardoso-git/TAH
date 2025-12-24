@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS users (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email           CITEXT UNIQUE,
   display_name    TEXT,
+  password_hash   TEXT,
   status          TEXT NOT NULL DEFAULT 'active',
   external_subject TEXT,
   metadata        JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -93,6 +94,8 @@ CREATE TABLE IF NOT EXISTS user_tenants (
   tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   status          user_tenant_status NOT NULL DEFAULT 'active',
   invited_by      UUID REFERENCES users(id) ON DELETE SET NULL,
+  invite_token    TEXT UNIQUE,
+  invite_expires_at TIMESTAMPTZ,
   joined_at       TIMESTAMPTZ,
   metadata        JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -108,6 +111,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE INDEX IF NOT EXISTS idx_user_tenants_tenant ON user_tenants(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_user_tenants_user ON user_tenants(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_tenants_status ON user_tenants(status);
+CREATE INDEX IF NOT EXISTS idx_user_tenants_invite_token ON user_tenants(invite_token) WHERE invite_token IS NOT NULL;
 
 -- Applications
 CREATE TABLE IF NOT EXISTS applications (

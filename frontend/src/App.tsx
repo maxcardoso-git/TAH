@@ -6,6 +6,7 @@ import { Shell } from '@/components/layout/shell'
 
 // Pages
 import { LoginPage } from '@/features/auth/pages/login'
+import { AcceptInvitePage } from '@/features/auth/pages/accept-invite'
 import { TenantsListPage } from '@/features/tenants/pages/tenants-list'
 import { TenantDetailPage } from '@/features/tenants/pages/tenant-detail'
 import { ApplicationsListPage } from '@/features/applications/pages/applications-list'
@@ -69,6 +70,7 @@ function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/accept-invite" element={<AcceptInvitePage />} />
         <Route path="/*" element={<ProtectedRoutes />} />
       </Routes>
     </AuthProvider>

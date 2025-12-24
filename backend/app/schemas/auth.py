@@ -6,10 +6,18 @@ from app.schemas.common import BaseSchema
 
 
 class LoginRequest(BaseSchema):
-    """Request for dev login by email."""
+    """Request for login with email and password."""
 
     email: str = Field(..., description="Email do usuário")
+    password: str = Field(..., description="Senha do usuário")
     tenant_id: UUID | None = Field(None, description="Tenant para contexto (opcional)")
+
+
+class AcceptInviteRequest(BaseSchema):
+    """Request to accept an invite and set password."""
+
+    token: str = Field(..., description="Token do convite")
+    password: str = Field(..., min_length=6, description="Nova senha (min 6 caracteres)")
 
 
 class TokenRequest(BaseSchema):

@@ -33,6 +33,7 @@ class User(Base):
     )
     email: Mapped[str | None] = mapped_column(String, unique=True, index=True)
     display_name: Mapped[str | None] = mapped_column(String)
+    password_hash: Mapped[str | None] = mapped_column(String)
     status: Mapped[str] = mapped_column(String, nullable=False, default="active")
     external_subject: Mapped[str | None] = mapped_column(String)
     metadata_: Mapped[dict] = mapped_column(
@@ -107,6 +108,8 @@ class UserTenant(Base):
         PGUUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
     )
+    invite_token: Mapped[str | None] = mapped_column(String, unique=True, index=True)
+    invite_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     joined_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     metadata_: Mapped[dict] = mapped_column(
         "metadata",

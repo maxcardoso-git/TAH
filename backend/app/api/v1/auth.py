@@ -1,17 +1,31 @@
+from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentTenantId, CurrentUserId, DbSession, get_token_payload
 from app.config import settings
-from app.core.exceptions import NotFoundError
-from app.core.security import TokenPayload, create_access_token, create_refresh_token
+from app.core.exceptions import BadRequestError, NotFoundError, UnauthorizedError
+from app.core.security import (
+    TokenPayload,
+    create_access_token,
+    create_refresh_token,
+    get_password_hash,
+    verify_password,
+)
 from app.models.role import Role, RolePermission
-from app.models.user import User, UserRole, UserTenant
-from app.schemas.auth import AccessContext, LoginRequest, TokenRequest, TokenResponse, UserInfo
+from app.models.user import User, UserRole, UserTenant, UserTenantStatus
+from app.schemas.auth import (
+    AcceptInviteRequest,
+    AccessContext,
+    LoginRequest,
+    TokenRequest,
+    TokenResponse,
+    UserInfo,
+)
 
 router = APIRouter()
 
@@ -19,16 +33,27 @@ router = APIRouter()
 @router.post("/login", response_model=TokenResponse)
 async def login(db: DbSession, data: LoginRequest):
     """
-    Login by email (development mode - no password required).
+    Login with email and password.
     Returns a JWT token for the user.
-    WARNING: Only use in development/testing environments!
     """
     # Find user by email
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
 
     if not user:
-        raise NotFoundError(detail=f"Usuário com email {data.email} não encontrado")
+        raise UnauthorizedError(detail="Email ou senha inválidos")
+
+    # Check if user has password set
+    if not user.password_hash:
+        raise UnauthorizedError(detail="Usuário não configurou senha. Verifique seu convite.")
+
+    # Verify password
+    if not verify_password(data.password, user.password_hash):
+        raise UnauthorizedError(detail="Email ou senha inválidos")
+
+    # Check user status
+    if user.status != "active":
+        raise UnauthorizedError(detail="Usuário inativo. Entre em contato com o administrador.")
 
     # Get user's roles and permissions for the tenant (if provided)
     roles: list[str] = ["admin"]  # Default admin for dev
@@ -91,28 +116,92 @@ async def login(db: DbSession, data: LoginRequest):
     )
 
 
+@router.post("/accept-invite", response_model=TokenResponse)
+async def accept_invite(db: DbSession, data: AcceptInviteRequest):
+    """
+    Accept an invite and set user password.
+    Returns a JWT token after successful password setup.
+    """
+    # Find the invite by token
+    result = await db.execute(
+        select(UserTenant).where(UserTenant.invite_token == data.token)
+    )
+    user_tenant = result.scalar_one_or_none()
+
+    if not user_tenant:
+        raise NotFoundError(detail="Convite não encontrado ou inválido")
+
+    # Check if invite is expired
+    if user_tenant.invite_expires_at and user_tenant.invite_expires_at < datetime.utcnow():
+        raise BadRequestError(detail="Convite expirado. Solicite um novo convite ao administrador.")
+
+    # Check if already accepted
+    if user_tenant.status != UserTenantStatus.INVITED:
+        raise BadRequestError(detail="Convite já foi utilizado")
+
+    # Get the user
+    user = await db.get(User, user_tenant.user_id)
+    if not user:
+        raise NotFoundError(detail="Usuário não encontrado")
+
+    # Set password and activate user
+    user.password_hash = get_password_hash(data.password)
+    user.status = "active"
+
+    # Update tenant membership
+    user_tenant.status = UserTenantStatus.ACTIVE
+    user_tenant.joined_at = datetime.utcnow()
+    user_tenant.invite_token = None  # Invalidate token
+
+    await db.commit()
+    await db.refresh(user)
+
+    # Create tokens
+    access_token = create_access_token(
+        subject=str(user.id),
+        tenant_id=str(user_tenant.tenant_id),
+        roles=["user"],  # Default role for new users
+        permissions=[],
+    )
+
+    refresh_token = create_refresh_token(subject=str(user.id))
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+        expires_in=settings.access_token_expire_minutes * 60,
+    )
+
+
 @router.post("/dev-token", response_model=TokenResponse)
 async def create_dev_token(db: DbSession):
     """
     Generate a development token without authentication.
-    Creates a demo user if it doesn't exist.
+    Creates a demo user if it doesn't exist (password: demo123).
     WARNING: Only use in development/testing environments!
     """
     # Check if demo user exists
     demo_email = "demo@example.com"
+    demo_password = "demo123"
     result = await db.execute(select(User).where(User.email == demo_email))
     user = result.scalar_one_or_none()
 
     if not user:
-        # Create demo user
+        # Create demo user with password
         user = User(
             email=demo_email,
             display_name="Demo User",
             status="active",
+            password_hash=get_password_hash(demo_password),
         )
         db.add(user)
         await db.commit()
         await db.refresh(user)
+    elif not user.password_hash:
+        # Set password if user exists but has no password
+        user.password_hash = get_password_hash(demo_password)
+        await db.commit()
 
     # Create token with admin role
     access_token = create_access_token(
