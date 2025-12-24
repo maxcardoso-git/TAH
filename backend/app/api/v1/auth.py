@@ -16,6 +16,47 @@ from app.schemas.auth import AccessContext, TokenRequest, TokenResponse, UserInf
 router = APIRouter()
 
 
+@router.post("/dev-token", response_model=TokenResponse)
+async def create_dev_token(db: DbSession):
+    """
+    Generate a development token without authentication.
+    Creates a demo user if it doesn't exist.
+    WARNING: Only use in development/testing environments!
+    """
+    # Check if demo user exists
+    demo_email = "demo@example.com"
+    result = await db.execute(select(User).where(User.email == demo_email))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        # Create demo user
+        user = User(
+            email=demo_email,
+            display_name="Demo User",
+            status="active",
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+
+    # Create token with admin role
+    access_token = create_access_token(
+        subject=str(user.id),
+        tenant_id=None,
+        roles=["admin"],
+        permissions=["*"],
+    )
+
+    refresh_token = create_refresh_token(subject=str(user.id))
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+        expires_in=settings.access_token_expire_minutes * 60,
+    )
+
+
 @router.post("/token", response_model=TokenResponse)
 async def create_token(
     db: DbSession,

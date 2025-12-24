@@ -52,23 +52,20 @@ export function LoginPage() {
     }
   }
 
-  // Demo login - skip authentication for development
-  const handleDemoLogin = () => {
-    // Create a demo JWT token
-    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-    const payload = btoa(JSON.stringify({
-      sub: 'demo-user-id',
-      email: 'demo@example.com',
-      name: 'Demo User',
-      tenant_id: null,
-      roles: ['admin'],
-      exp: Math.floor(Date.now() / 1000) + 86400, // 24 hours
-    }))
-    const signature = btoa('demo-signature')
-    const demoToken = `${header}.${payload}.${signature}`
+  // Demo login - get a real token from the backend
+  const handleDemoLogin = async () => {
+    setIsLoading(true)
+    setError('')
 
-    login(demoToken)
-    navigate('/tenants')
+    try {
+      const response = await apiClient.post('/auth/dev-token')
+      login(response.data.access_token)
+      navigate('/tenants')
+    } catch {
+      setError('Erro ao criar sessao de demonstracao.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
