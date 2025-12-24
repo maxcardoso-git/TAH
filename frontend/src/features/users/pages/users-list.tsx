@@ -3,10 +3,12 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient, { PaginatedResponse } from '@/api/client'
 import { UserWithRoles } from '@/types/user'
+import { Role } from '@/types/role'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Card,
   CardContent,
@@ -23,7 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus, Search, User, Shield, Mail, Loader2 } from 'lucide-react'
+import { Plus, Search, User, Shield, Mail, Loader2, X } from 'lucide-react'
 import { STATUS_COLORS } from '@/lib/constants'
 
 export function UsersListPage() {
@@ -32,7 +34,21 @@ export function UsersListPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteDisplayName, setInviteDisplayName] = useState('')
+  const [manageUser, setManageUser] = useState<UserWithRoles | null>(null)
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([])
   const queryClient = useQueryClient()
+
+  // Fetch available roles for the tenant
+  const { data: rolesData } = useQuery({
+    queryKey: ['roles', tenantId],
+    queryFn: async () => {
+      const response = await apiClient.get<PaginatedResponse<Role>>(
+        `/tenants/${tenantId}/roles`
+      )
+      return response.data
+    },
+    enabled: !!tenantId && !!manageUser,
+  })
 
   const inviteUserMutation = useMutation({
     mutationFn: async (data: { email: string; display_name?: string }) => {
@@ -50,11 +66,81 @@ export function UsersListPage() {
     },
   })
 
+  const assignRolesMutation = useMutation({
+    mutationFn: async ({ userId, roleIds }: { userId: string; roleIds: string[] }) => {
+      const response = await apiClient.post(
+        `/tenants/${tenantId}/users/${userId}/roles`,
+        { role_ids: roleIds }
+      )
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users', tenantId] })
+    },
+  })
+
+  const removeRoleMutation = useMutation({
+    mutationFn: async ({ userId, roleId }: { userId: string; roleId: string }) => {
+      await apiClient.delete(`/tenants/${tenantId}/users/${userId}/roles/${roleId}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users', tenantId] })
+    },
+  })
+
   const handleInviteUser = (e: React.FormEvent) => {
     e.preventDefault()
     inviteUserMutation.mutate({
       email: inviteEmail,
       display_name: inviteDisplayName || undefined,
+    })
+  }
+
+  const handleOpenManageDialog = (user: UserWithRoles) => {
+    setManageUser(user)
+    setSelectedRoles([])
+  }
+
+  const handleCloseManageDialog = () => {
+    setManageUser(null)
+    setSelectedRoles([])
+  }
+
+  const handleToggleRole = (roleId: string) => {
+    setSelectedRoles((prev) =>
+      prev.includes(roleId)
+        ? prev.filter((id) => id !== roleId)
+        : [...prev, roleId]
+    )
+  }
+
+  const handleAssignRoles = async () => {
+    if (!manageUser || selectedRoles.length === 0) return
+    await assignRolesMutation.mutateAsync({
+      userId: manageUser.id,
+      roleIds: selectedRoles,
+    })
+    setSelectedRoles([])
+    // Refresh user data
+    const response = await apiClient.get<PaginatedResponse<UserWithRoles>>(
+      `/tenants/${tenantId}/users`
+    )
+    const updatedUser = response.data.items.find((u) => u.id === manageUser.id)
+    if (updatedUser) {
+      setManageUser(updatedUser)
+    }
+  }
+
+  const handleRemoveRole = async (roleId: string) => {
+    if (!manageUser) return
+    await removeRoleMutation.mutateAsync({
+      userId: manageUser.id,
+      roleId,
+    })
+    // Update local state
+    setManageUser({
+      ...manageUser,
+      roles: manageUser.roles.filter((r) => r.id !== roleId),
     })
   }
 
@@ -71,6 +157,11 @@ export function UsersListPage() {
     },
     enabled: !!tenantId,
   })
+
+  // Get roles that user doesn't have yet
+  const availableRoles = rolesData?.items.filter(
+    (role) => !manageUser?.roles.some((ur) => ur.id === role.id)
+  ) || []
 
   return (
     <div className="space-y-6">
@@ -231,7 +322,11 @@ export function UsersListPage() {
                       {user.tenant_status}
                     </Badge>
 
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenManageDialog(user)}
+                    >
                       Gerenciar
                     </Button>
                   </div>
@@ -241,6 +336,106 @@ export function UsersListPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Manage User Roles Dialog */}
+      <Dialog open={!!manageUser} onOpenChange={(open) => !open && handleCloseManageDialog()}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Gerenciar Roles</DialogTitle>
+            <DialogDescription>
+              {manageUser?.display_name || manageUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Current Roles */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Roles Atuais</Label>
+              {manageUser?.roles.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum role atribuído
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {manageUser?.roles.map((role) => (
+                    <Badge
+                      key={role.id}
+                      variant={role.is_system ? 'secondary' : 'outline'}
+                      className="flex items-center gap-1 pr-1"
+                    >
+                      {role.name}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRole(role.id)}
+                        className="ml-1 rounded-full p-0.5 hover:bg-muted"
+                        disabled={removeRoleMutation.isPending}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Add Roles */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Adicionar Roles</Label>
+              {availableRoles.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Todos os roles já foram atribuídos
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+                  {availableRoles.map((role) => (
+                    <div
+                      key={role.id}
+                      className="flex items-center space-x-3 py-1"
+                    >
+                      <Checkbox
+                        id={role.id}
+                        checked={selectedRoles.includes(role.id)}
+                        onCheckedChange={() => handleToggleRole(role.id)}
+                      />
+                      <label
+                        htmlFor={role.id}
+                        className="flex-1 text-sm cursor-pointer"
+                      >
+                        <span className="font-medium">{role.name}</span>
+                        {role.description && (
+                          <span className="text-muted-foreground ml-2">
+                            - {role.description}
+                          </span>
+                        )}
+                      </label>
+                      {role.is_system && (
+                        <Badge variant="secondary" className="text-xs">
+                          Sistema
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseManageDialog}>
+              Fechar
+            </Button>
+            <Button
+              onClick={handleAssignRoles}
+              disabled={selectedRoles.length === 0 || assignRolesMutation.isPending}
+            >
+              {assignRolesMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Atribuir Roles ({selectedRoles.length})
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
