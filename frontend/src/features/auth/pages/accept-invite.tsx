@@ -27,7 +27,7 @@ export function AcceptInvitePage() {
 
   useEffect(() => {
     if (!token) {
-      setError('Token de convite não encontrado. Verifique o link recebido.')
+      setError('Invite token not found. Please check the link you received.')
     }
   }, [token])
 
@@ -35,12 +35,12 @@ export function AcceptInvitePage() {
     e.preventDefault()
 
     if (password !== confirmPassword) {
-      setError('As senhas não coincidem')
+      setError('Passwords do not match')
       return
     }
 
     if (password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres')
+      setError('Password must be at least 6 characters')
       return
     }
 
@@ -62,7 +62,7 @@ export function AcceptInvitePage() {
       }, 1500)
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || 'Erro ao configurar senha. Tente novamente.')
+      setError(error.response?.data?.detail || 'Error setting password. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -77,9 +77,9 @@ export function AcceptInvitePage() {
               <div className="p-3 bg-green-100 rounded-full">
                 <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
-              <h2 className="text-xl font-semibold">Senha configurada!</h2>
+              <h2 className="text-xl font-semibold">Password set!</h2>
               <p className="text-muted-foreground">
-                Redirecionando para o sistema...
+                Redirecting to the system...
               </p>
             </div>
           </CardContent>
@@ -97,21 +97,21 @@ export function AcceptInvitePage() {
               <Shield className="h-8 w-8 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Configure sua senha</CardTitle>
+          <CardTitle className="text-2xl">Set up your password</CardTitle>
           <CardDescription>
-            Defina uma senha para acessar o IAM Console
+            Set a password to access IAM Console
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">
-                Nova Senha
+                New Password
               </label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Digite sua senha"
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -123,12 +123,12 @@ export function AcceptInvitePage() {
 
             <div className="space-y-2">
               <label htmlFor="confirmPassword" className="text-sm font-medium">
-                Confirmar Senha
+                Confirm Password
               </label>
               <Input
                 id="confirmPassword"
                 type="password"
-                placeholder="Confirme sua senha"
+                placeholder="Confirm your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
@@ -136,7 +136,7 @@ export function AcceptInvitePage() {
                 disabled={!token}
               />
               <p className="text-xs text-muted-foreground">
-                Minimo de 6 caracteres
+                Minimum 6 characters
               </p>
             </div>
 
@@ -149,7 +149,7 @@ export function AcceptInvitePage() {
 
             <Button type="submit" className="w-full" disabled={isLoading || !token}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Configurar Senha e Entrar
+              Set Password and Sign In
             </Button>
           </form>
 
@@ -159,7 +159,7 @@ export function AcceptInvitePage() {
               variant="link"
               onClick={() => navigate('/login')}
             >
-              Ja tenho uma conta
+              I already have an account
             </Button>
           </div>
         </CardContent>

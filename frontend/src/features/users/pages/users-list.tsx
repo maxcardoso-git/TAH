@@ -198,24 +198,24 @@ export function UsersListPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Usuários</h1>
+          <h1 className="text-3xl font-bold">Users</h1>
           <p className="text-muted-foreground">
-            Gerencie os usuários e suas atribuições de roles
+            Manage users and their role assignments
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Convidar Usuário
+              Invite User
             </Button>
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleInviteUser}>
               <DialogHeader>
-                <DialogTitle>Convidar Usuário</DialogTitle>
+                <DialogTitle>Invite User</DialogTitle>
                 <DialogDescription>
-                  Convide um novo usuário para este tenant.
+                  Invite a new user to this tenant.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -224,17 +224,17 @@ export function UsersListPage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="usuario@exemplo.com"
+                    placeholder="user@example.com"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     required
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="displayName">Nome (opcional)</Label>
+                  <Label htmlFor="displayName">Name (optional)</Label>
                   <Input
                     id="displayName"
-                    placeholder="Nome do usuario"
+                    placeholder="User name"
                     value={inviteDisplayName}
                     onChange={(e) => setInviteDisplayName(e.target.value)}
                   />
@@ -246,13 +246,13 @@ export function UsersListPage() {
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
                 >
-                  Cancelar
+                  Cancel
                 </Button>
                 <Button type="submit" disabled={inviteUserMutation.isPending}>
                   {inviteUserMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Convidar
+                  Invite
                 </Button>
               </DialogFooter>
             </form>
@@ -265,7 +265,7 @@ export function UsersListPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar usuários..."
+            placeholder="Search users..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
@@ -276,9 +276,9 @@ export function UsersListPage() {
       {/* Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Membros do Tenant</CardTitle>
+          <CardTitle>Tenant Members</CardTitle>
           <CardDescription>
-            {data?.total || 0} usuários encontrados
+            {data?.total || 0} users found
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -299,7 +299,7 @@ export function UsersListPage() {
             </div>
           ) : data?.items.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              Nenhum usuário encontrado
+              No users found
             </p>
           ) : (
             <div className="space-y-2">
@@ -314,7 +314,7 @@ export function UsersListPage() {
                     </div>
                     <div>
                       <p className="font-medium">
-                        {user.display_name || 'Usuário'}
+                        {user.display_name || 'User'}
                       </p>
                       {user.email && (
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -332,7 +332,7 @@ export function UsersListPage() {
                       <div className="flex gap-1">
                         {user.roles.length === 0 ? (
                           <span className="text-sm text-muted-foreground">
-                            Sem roles
+                            No roles
                           </span>
                         ) : (
                           user.roles.map((role) => (
@@ -364,7 +364,7 @@ export function UsersListPage() {
                       size="sm"
                       onClick={() => handleOpenManageDialog(user)}
                     >
-                      Gerenciar
+                      Manage
                     </Button>
                   </div>
                 </div>
@@ -379,17 +379,17 @@ export function UsersListPage() {
         <DialogContent>
           <form onSubmit={handleUpdateUser}>
             <DialogHeader>
-              <DialogTitle>Editar Usuário</DialogTitle>
+              <DialogTitle>Edit User</DialogTitle>
               <DialogDescription>
                 {editUser?.email}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="edit-display-name">Nome de exibição</Label>
+                <Label htmlFor="edit-display-name">Display name</Label>
                 <Input
                   id="edit-display-name"
-                  placeholder="Nome do usuário"
+                  placeholder="User name"
                   value={editDisplayName}
                   onChange={(e) => setEditDisplayName(e.target.value)}
                   required
@@ -402,13 +402,13 @@ export function UsersListPage() {
                 variant="outline"
                 onClick={() => setEditUser(null)}
               >
-                Cancelar
+                Cancel
               </Button>
               <Button type="submit" disabled={updateUserMutation.isPending}>
                 {updateUserMutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Salvar
+                Save
               </Button>
             </DialogFooter>
           </form>
@@ -419,7 +419,7 @@ export function UsersListPage() {
       <Dialog open={!!manageUser} onOpenChange={(open) => !open && handleCloseManageDialog()}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Gerenciar Roles</DialogTitle>
+            <DialogTitle>Manage Roles</DialogTitle>
             <DialogDescription>
               {manageUser?.display_name || manageUser?.email}
             </DialogDescription>
@@ -428,10 +428,10 @@ export function UsersListPage() {
           <div className="space-y-6 py-4">
             {/* Current Roles */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium">Roles Atuais</Label>
+              <Label className="text-sm font-medium">Current Roles</Label>
               {manageUser?.roles.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Nenhum role atribuído
+                  No roles assigned
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">
@@ -458,10 +458,10 @@ export function UsersListPage() {
 
             {/* Add Roles */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium">Adicionar Roles</Label>
+              <Label className="text-sm font-medium">Add Roles</Label>
               {availableRoles.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Todos os roles já foram atribuídos
+                  All roles already assigned
                 </p>
               ) : (
                 <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3">
@@ -488,7 +488,7 @@ export function UsersListPage() {
                       </label>
                       {role.is_system && (
                         <Badge variant="secondary" className="text-xs">
-                          Sistema
+                          System
                         </Badge>
                       )}
                     </div>
@@ -500,7 +500,7 @@ export function UsersListPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={handleCloseManageDialog}>
-              Fechar
+              Close
             </Button>
             <Button
               onClick={handleAssignRoles}
@@ -509,7 +509,7 @@ export function UsersListPage() {
               {assignRolesMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Atribuir Roles ({selectedRoles.length})
+              Assign Roles ({selectedRoles.length})
             </Button>
           </DialogFooter>
         </DialogContent>

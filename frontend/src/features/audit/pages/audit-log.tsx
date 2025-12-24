@@ -62,12 +62,12 @@ export function AuditLogPage() {
         <div>
           <h1 className="text-3xl font-bold">Audit Log</h1>
           <p className="text-muted-foreground">
-            Histórico de todas as alterações do tenant
+            History of all tenant changes
           </p>
         </div>
         <Button variant="outline">
           <Download className="mr-2 h-4 w-4" />
-          Exportar
+          Export
         </Button>
       </div>
 
@@ -76,7 +76,7 @@ export function AuditLogPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por entidade..."
+            placeholder="Search by entity..."
             className="pl-10"
           />
         </div>
@@ -85,9 +85,9 @@ export function AuditLogPage() {
       {/* Logs */}
       <Card>
         <CardHeader>
-          <CardTitle>Eventos</CardTitle>
+          <CardTitle>Events</CardTitle>
           <CardDescription>
-            {data?.total || 0} eventos registrados
+            {data?.total || 0} events recorded
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -108,7 +108,7 @@ export function AuditLogPage() {
             </div>
           ) : data?.items.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              Nenhum evento registrado
+              No events recorded
             </p>
           ) : (
             <div className="space-y-2">
@@ -139,7 +139,7 @@ export function AuditLogPage() {
                       </p>
                       {log.actor_name && (
                         <p className="text-sm text-muted-foreground">
-                          por {log.actor_name}
+                          by {log.actor_name}
                         </p>
                       )}
                     </div>
@@ -153,25 +153,25 @@ export function AuditLogPage() {
                     <div className="border-t p-4 bg-muted/30">
                       <dl className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <dt className="text-muted-foreground">ID do Evento</dt>
+                          <dt className="text-muted-foreground">Event ID</dt>
                           <dd className="font-mono">{log.id}</dd>
                         </div>
                         <div>
-                          <dt className="text-muted-foreground">Ator</dt>
+                          <dt className="text-muted-foreground">Actor</dt>
                           <dd className="font-mono">
-                            {log.actor_user_id || 'Sistema'}
+                            {log.actor_user_id || 'System'}
                           </dd>
                         </div>
                         {log.reason && (
                           <div className="col-span-2">
-                            <dt className="text-muted-foreground">Motivo</dt>
+                            <dt className="text-muted-foreground">Reason</dt>
                             <dd>{log.reason}</dd>
                           </div>
                         )}
                         {Object.keys(log.changes).length > 0 && (
                           <div className="col-span-2">
                             <dt className="text-muted-foreground mb-2">
-                              Alterações
+                              Changes
                             </dt>
                             <dd>
                               <pre className="p-2 bg-muted rounded-md text-xs overflow-x-auto">
@@ -197,10 +197,10 @@ export function AuditLogPage() {
                 disabled={page === 1}
                 onClick={() => setPage(page - 1)}
               >
-                Anterior
+                Previous
               </Button>
               <span className="text-sm text-muted-foreground">
-                Página {page} de {data.pages}
+                Page {page} of {data.pages}
               </span>
               <Button
                 variant="outline"
@@ -208,7 +208,7 @@ export function AuditLogPage() {
                 disabled={page === data.pages}
                 onClick={() => setPage(page + 1)}
               >
-                Próxima
+                Next
               </Button>
             </div>
           )}

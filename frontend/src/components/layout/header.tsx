@@ -33,12 +33,12 @@ export function Header() {
           <div className="flex items-center gap-2 text-sm">
             <User className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">
-              {user.display_name || user.email || 'Usuário'}
+              {user.display_name || user.email || 'User'}
             </span>
           </div>
         )}
 
-        <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
+        <Button variant="ghost" size="icon" onClick={handleLogout} title="Sign out">
           <LogOut className="h-4 w-4" />
         </Button>
       </div>

@@ -112,40 +112,40 @@ export function RolesListPage() {
         <div>
           <h1 className="text-3xl font-bold">Roles</h1>
           <p className="text-muted-foreground">
-            Gerencie os perfis de acesso do tenant
+            Manage tenant access profiles
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Novo Role
+              New Role
             </Button>
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleCreateRole}>
               <DialogHeader>
-                <DialogTitle>Criar Novo Role</DialogTitle>
+                <DialogTitle>Create New Role</DialogTitle>
                 <DialogDescription>
-                  Crie um novo perfil de acesso para o tenant.
+                  Create a new access profile for the tenant.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="name">Nome</Label>
+                  <Label htmlFor="name">Name</Label>
                   <Input
                     id="name"
-                    placeholder="Ex: Administrador, Editor, Viewer"
+                    placeholder="Ex: Administrator, Editor, Viewer"
                     value={newRoleName}
                     onChange={(e) => setNewRoleName(e.target.value)}
                     required
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="description">Descricao</Label>
+                  <Label htmlFor="description">Description</Label>
                   <Input
                     id="description"
-                    placeholder="Descricao do role (opcional)"
+                    placeholder="Role description (optional)"
                     value={newRoleDescription}
                     onChange={(e) => setNewRoleDescription(e.target.value)}
                   />
@@ -157,13 +157,13 @@ export function RolesListPage() {
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
                 >
-                  Cancelar
+                  Cancel
                 </Button>
                 <Button type="submit" disabled={createRoleMutation.isPending}>
                   {createRoleMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Criar Role
+                  Create Role
                 </Button>
               </DialogFooter>
             </form>
@@ -176,7 +176,7 @@ export function RolesListPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar roles..."
+            placeholder="Search roles..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
@@ -214,7 +214,7 @@ export function RolesListPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {role.is_system && (
-                      <Badge variant="secondary">Sistema</Badge>
+                      <Badge variant="secondary">System</Badge>
                     )}
                     <Badge className={STATUS_COLORS[role.status]}>
                       {role.status}
@@ -230,19 +230,19 @@ export function RolesListPage() {
                   {role.permissions_count !== undefined && (
                     <div className="flex items-center gap-1">
                       <Key className="h-4 w-4" />
-                      <span>{role.permissions_count} permissões</span>
+                      <span>{role.permissions_count} permissions</span>
                     </div>
                   )}
                   {role.users_count !== undefined && (
                     <div className="flex items-center gap-1">
                       <Users className="h-4 w-4" />
-                      <span>{role.users_count} usuários</span>
+                      <span>{role.users_count} users</span>
                     </div>
                   )}
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  Criado {formatRelativeDate(role.created_at)}
+                  Created {formatRelativeDate(role.created_at)}
                 </p>
 
                 <div className="flex gap-2 pt-2">
@@ -252,7 +252,7 @@ export function RolesListPage() {
                   >
                     <Button variant="outline" size="sm" className="w-full">
                       <Key className="mr-2 h-4 w-4" />
-                      Permissões
+                      Permissions
                     </Button>
                   </Link>
                   <Button
@@ -282,27 +282,27 @@ export function RolesListPage() {
         <DialogContent>
           <form onSubmit={handleUpdateRole}>
             <DialogHeader>
-              <DialogTitle>Editar Role</DialogTitle>
+              <DialogTitle>Edit Role</DialogTitle>
               <DialogDescription>
-                Atualize as informações do role.
+                Update role information.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="edit-name">Nome</Label>
+                <Label htmlFor="edit-name">Name</Label>
                 <Input
                   id="edit-name"
-                  placeholder="Nome do role"
+                  placeholder="Role name"
                   value={editRoleName}
                   onChange={(e) => setEditRoleName(e.target.value)}
                   required
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-description">Descrição</Label>
+                <Label htmlFor="edit-description">Description</Label>
                 <Input
                   id="edit-description"
-                  placeholder="Descrição do role (opcional)"
+                  placeholder="Role description (optional)"
                   value={editRoleDescription}
                   onChange={(e) => setEditRoleDescription(e.target.value)}
                 />
@@ -314,13 +314,13 @@ export function RolesListPage() {
                 variant="outline"
                 onClick={() => setEditRole(null)}
               >
-                Cancelar
+                Cancel
               </Button>
               <Button type="submit" disabled={updateRoleMutation.isPending}>
                 {updateRoleMutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Salvar
+                Save
               </Button>
             </DialogFooter>
           </form>

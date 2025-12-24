@@ -41,9 +41,9 @@ export function LoginPage() {
       if (typeof detail === 'string') {
         setError(detail)
       } else if (Array.isArray(detail) && detail.length > 0) {
-        setError(detail[0].msg || 'Erro de validação')
+        setError(detail[0].msg || 'Validation error')
       } else {
-        setError('Erro ao fazer login. Verifique suas credenciais.')
+        setError('Login failed. Please check your credentials.')
       }
     } finally {
       setIsLoading(false)
@@ -60,7 +60,7 @@ export function LoginPage() {
       login(response.data.access_token)
       navigate('/tenants')
     } catch {
-      setError('Erro ao criar sessao de demonstracao.')
+      setError('Error creating demo session.')
     } finally {
       setIsLoading(false)
     }
@@ -89,7 +89,7 @@ export function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="seu@email.com"
+                placeholder="your@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -99,12 +99,12 @@ export function LoginPage() {
 
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">
-                Senha
+                Password
               </label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Digite sua senha"
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -120,7 +120,7 @@ export function LoginPage() {
 
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Entrar
+              Sign In
             </Button>
           </form>
 
@@ -131,7 +131,7 @@ export function LoginPage() {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-background px-2 text-muted-foreground">
-                  Ou
+                  Or
                 </span>
               </div>
             </div>
@@ -143,10 +143,10 @@ export function LoginPage() {
               onClick={handleDemoLogin}
               disabled={isLoading}
             >
-              Entrar como Demo
+              Sign In as Demo
             </Button>
             <p className="text-xs text-center text-muted-foreground mt-2">
-              Cria um usuario demo com acesso admin
+              Creates a demo user with admin access
             </p>
           </div>
         </CardContent>

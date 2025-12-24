@@ -17,7 +17,7 @@ const mainNavItems = [
     icon: Building2,
   },
   {
-    title: 'Aplicações',
+    title: 'Applications',
     href: '/applications',
     icon: LayoutGrid,
   },
@@ -30,7 +30,7 @@ const tenantNavItems = [
     icon: Shield,
   },
   {
-    title: 'Usuários',
+    title: 'Users',
     href: '/users',
     icon: Users,
   },
@@ -63,7 +63,7 @@ export function Sidebar() {
         {/* Main Navigation */}
         <div className="space-y-1">
           <p className="px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Plataforma
+            Platform
           </p>
           {mainNavItems.map((item) => (
             <Link

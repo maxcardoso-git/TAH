@@ -93,30 +93,30 @@ export function TenantsListPage() {
         <div>
           <h1 className="text-3xl font-bold">Tenants</h1>
           <p className="text-muted-foreground">
-            Gerencie as organizacoes da plataforma
+            Manage platform organizations
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Novo Tenant
+              New Tenant
             </Button>
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleCreateTenant}>
               <DialogHeader>
-                <DialogTitle>Criar Novo Tenant</DialogTitle>
+                <DialogTitle>Create New Tenant</DialogTitle>
                 <DialogDescription>
-                  Adicione uma nova organizacao a plataforma.
+                  Add a new organization to the platform.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="name">Nome</Label>
+                  <Label htmlFor="name">Name</Label>
                   <Input
                     id="name"
-                    placeholder="Nome da organizacao"
+                    placeholder="Organization name"
                     value={newTenantName}
                     onChange={(e) => handleNameChange(e.target.value)}
                     required
@@ -126,13 +126,13 @@ export function TenantsListPage() {
                   <Label htmlFor="slug">Slug</Label>
                   <Input
                     id="slug"
-                    placeholder="nome-da-organizacao"
+                    placeholder="organization-name"
                     value={newTenantSlug}
                     onChange={(e) => setNewTenantSlug(e.target.value)}
                     className="font-mono"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Identificador unico usado em URLs e integracoes
+                    Unique identifier used in URLs and integrations
                   </p>
                 </div>
               </div>
@@ -142,13 +142,13 @@ export function TenantsListPage() {
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
                 >
-                  Cancelar
+                  Cancel
                 </Button>
                 <Button type="submit" disabled={createTenantMutation.isPending}>
                   {createTenantMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Criar Tenant
+                  Create Tenant
                 </Button>
               </DialogFooter>
             </form>
@@ -161,7 +161,7 @@ export function TenantsListPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar tenants..."
+            placeholder="Search tenants..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
@@ -187,13 +187,13 @@ export function TenantsListPage() {
       ) : data?.items.length === 0 ? (
         <Card className="p-12 text-center">
           <Building2 className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-semibold">Nenhum tenant encontrado</h3>
+          <h3 className="mt-4 text-lg font-semibold">No tenants found</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            Crie seu primeiro tenant para comecar.
+            Create your first tenant to get started.
           </p>
           <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Criar Tenant
+            Create Tenant
           </Button>
         </Card>
       ) : (
@@ -224,7 +224,7 @@ export function TenantsListPage() {
                     {tenant.users_count !== undefined && (
                       <div className="flex items-center gap-1">
                         <Users className="h-4 w-4" />
-                        <span>{tenant.users_count} usuarios</span>
+                        <span>{tenant.users_count} users</span>
                       </div>
                     )}
                     {tenant.roles_count !== undefined && (
@@ -235,7 +235,7 @@ export function TenantsListPage() {
                     )}
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Criado {formatRelativeDate(tenant.created_at)}
+                    Created {formatRelativeDate(tenant.created_at)}
                   </p>
                 </CardContent>
               </Card>
@@ -253,10 +253,10 @@ export function TenantsListPage() {
             disabled={page === 1}
             onClick={() => setPage(page - 1)}
           >
-            Anterior
+            Previous
           </Button>
           <span className="text-sm text-muted-foreground">
-            Pagina {page} de {data.pages}
+            Page {page} of {data.pages}
           </span>
           <Button
             variant="outline"
@@ -264,7 +264,7 @@ export function TenantsListPage() {
             disabled={page === data.pages}
             onClick={() => setPage(page + 1)}
           >
-            Proxima
+            Next
           </Button>
         </div>
       )}

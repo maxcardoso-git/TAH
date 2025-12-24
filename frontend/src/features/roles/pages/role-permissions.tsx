@@ -82,14 +82,14 @@ export function RolePermissionsPage() {
       )
     },
     onSuccess: () => {
-      toast({ title: 'Permissões salvas com sucesso' })
+      toast({ title: 'Permissions saved successfully' })
       setHasChanges(false)
       queryClient.invalidateQueries({
         queryKey: ['permission-matrix', tenantId, roleId],
       })
     },
     onError: () => {
-      toast({ title: 'Erro ao salvar permissões', variant: 'destructive' })
+      toast({ title: 'Error saving permissions', variant: 'destructive' })
     },
   })
 
@@ -161,9 +161,9 @@ export function RolePermissionsPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Permissões do Role</h1>
+          <h1 className="text-3xl font-bold">Role Permissions</h1>
           <p className="text-muted-foreground">
-            {role?.name} - Gerencie as permissões atribuídas a este role
+            {role?.name} - Manage permissions assigned to this role
           </p>
         </div>
         <div className="flex gap-2">
@@ -173,36 +173,36 @@ export function RolePermissionsPage() {
             disabled={!hasChanges}
           >
             <RotateCcw className="mr-2 h-4 w-4" />
-            Resetar
+            Reset
           </Button>
           <Button
             onClick={() => saveMutation.mutate()}
             disabled={!hasChanges || saveMutation.isPending}
           >
             <Save className="mr-2 h-4 w-4" />
-            Salvar Alterações
+            Save Changes
           </Button>
         </div>
       </div>
 
       {hasChanges && (
         <div className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 px-4 py-2 rounded-md text-sm">
-          Você tem alterações não salvas
+          You have unsaved changes
         </div>
       )}
 
       {/* Permission Matrix */}
       <Card>
         <CardHeader>
-          <CardTitle>Matriz de Permissões</CardTitle>
+          <CardTitle>Permissions Matrix</CardTitle>
           <CardDescription>
-            Selecione as permissões que este role deve ter acesso
+            Select the permissions this role should have access to
           </CardDescription>
         </CardHeader>
         <CardContent>
           {matrix?.applications.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              Nenhuma aplicação habilitada para este tenant
+              No applications enabled for this tenant
             </p>
           ) : (
             <div className="space-y-4">
@@ -225,7 +225,7 @@ export function RolePermissionsPage() {
                           (acc, m) => acc + m.permissions.length,
                           0
                         )}{' '}
-                        permissões
+                        permissions
                       </Badge>
                     </div>
                   </button>

@@ -113,7 +113,7 @@ export function TenantDetailPage() {
   if (!tenant) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Tenant não encontrado</p>
+        <p className="text-muted-foreground">Tenant not found</p>
       </div>
     )
   }
@@ -121,28 +121,28 @@ export function TenantDetailPage() {
   const quickLinks = [
     {
       title: 'Roles',
-      description: 'Gerenciar perfis de acesso',
+      description: 'Manage access profiles',
       href: `/tenants/${tenantId}/roles`,
       icon: Shield,
       count: tenant.roles_count,
     },
     {
-      title: 'Usuários',
-      description: 'Gerenciar usuários do tenant',
+      title: 'Users',
+      description: 'Manage tenant users',
       href: `/tenants/${tenantId}/users`,
       icon: Users,
       count: tenant.users_count,
     },
     {
-      title: 'Aplicações',
-      description: 'Apps habilitadas para este tenant',
+      title: 'Applications',
+      description: 'Apps enabled for this tenant',
       href: `/tenants/${tenantId}/applications`,
       icon: LayoutGrid,
       count: tenant.applications_count,
     },
     {
       title: 'Audit Log',
-      description: 'Histórico de alterações',
+      description: 'Change history',
       href: `/tenants/${tenantId}/audit`,
       icon: FileText,
     },
@@ -165,7 +165,7 @@ export function TenantDetailPage() {
         </div>
         <Button variant="outline" onClick={openEditDialog}>
           <Edit className="mr-2 h-4 w-4" />
-          Editar
+          Edit
         </Button>
       </div>
 
@@ -174,17 +174,17 @@ export function TenantDetailPage() {
         <DialogContent>
           <form onSubmit={handleUpdateTenant}>
             <DialogHeader>
-              <DialogTitle>Editar Tenant</DialogTitle>
+              <DialogTitle>Edit Tenant</DialogTitle>
               <DialogDescription>
-                Atualize as informacoes do tenant.
+                Update tenant information.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="edit-name">Nome</Label>
+                <Label htmlFor="edit-name">Name</Label>
                 <Input
                   id="edit-name"
-                  placeholder="Nome da organizacao"
+                  placeholder="Organization name"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   required
@@ -194,24 +194,24 @@ export function TenantDetailPage() {
                 <Label htmlFor="edit-slug">Slug</Label>
                 <Input
                   id="edit-slug"
-                  placeholder="nome-da-organizacao"
+                  placeholder="organization-name"
                   value={editSlug}
                   onChange={(e) => setEditSlug(e.target.value)}
                   className="font-mono"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Identificador unico usado em URLs e integracoes
+                  Unique identifier used in URLs and integrations
                 </p>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-status">Status</Label>
                 <Select value={editStatus} onValueChange={(v) => setEditStatus(v as TenantStatus)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o status" />
+                    <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="suspended">Suspenso</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="suspended">Suspended</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -222,13 +222,13 @@ export function TenantDetailPage() {
                 variant="outline"
                 onClick={() => setIsEditDialogOpen(false)}
               >
-                Cancelar
+                Cancel
               </Button>
               <Button type="submit" disabled={updateTenantMutation.isPending}>
                 {updateTenantMutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Salvar
+                Save
               </Button>
             </DialogFooter>
           </form>
@@ -238,7 +238,7 @@ export function TenantDetailPage() {
       {/* Info */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Informações</CardTitle>
+          <CardTitle className="text-lg">Information</CardTitle>
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-2 gap-4 text-sm">
@@ -247,11 +247,11 @@ export function TenantDetailPage() {
               <dd className="font-mono">{tenant.id}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Criado em</dt>
+              <dt className="text-muted-foreground">Created at</dt>
               <dd>{formatDate(tenant.created_at)}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Atualizado em</dt>
+              <dt className="text-muted-foreground">Updated at</dt>
               <dd>{formatDate(tenant.updated_at)}</dd>
             </div>
             <div>

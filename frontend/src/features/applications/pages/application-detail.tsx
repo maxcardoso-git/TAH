@@ -73,7 +73,7 @@ export function ApplicationDetailPage() {
       await apiClient.post(`/applications/${applicationId}/sync-permissions`)
     },
     onSuccess: () => {
-      toast({ title: 'Permissões sincronizadas com sucesso' })
+      toast({ title: 'Permissions synced successfully' })
       queryClient.invalidateQueries({ queryKey: ['application', applicationId] })
       queryClient.invalidateQueries({
         queryKey: ['application-permissions', applicationId],
@@ -81,7 +81,7 @@ export function ApplicationDetailPage() {
     },
     onError: () => {
       toast({
-        title: 'Erro ao sincronizar permissões',
+        title: 'Error syncing permissions',
         variant: 'destructive',
       })
     },
@@ -96,14 +96,14 @@ export function ApplicationDetailPage() {
       return response.data
     },
     onSuccess: () => {
-      toast({ title: 'Aplicação atualizada com sucesso' })
+      toast({ title: 'Application updated successfully' })
       queryClient.invalidateQueries({ queryKey: ['application', applicationId] })
       queryClient.invalidateQueries({ queryKey: ['applications'] })
       setIsEditDialogOpen(false)
     },
     onError: () => {
       toast({
-        title: 'Erro ao atualizar aplicação',
+        title: 'Error updating application',
         variant: 'destructive',
       })
     },
@@ -158,7 +158,7 @@ export function ApplicationDetailPage() {
   if (!app) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Aplicação não encontrada</p>
+        <p className="text-muted-foreground">Application not found</p>
       </div>
     )
   }
@@ -195,7 +195,7 @@ export function ApplicationDetailPage() {
           </Button>
           <Button variant="outline" onClick={openEditDialog}>
             <Edit className="mr-2 h-4 w-4" />
-            Editar
+            Edit
           </Button>
         </div>
       </div>
@@ -205,27 +205,27 @@ export function ApplicationDetailPage() {
         <DialogContent>
           <form onSubmit={handleUpdateApp}>
             <DialogHeader>
-              <DialogTitle>Editar Aplicação</DialogTitle>
+              <DialogTitle>Edit Application</DialogTitle>
               <DialogDescription>
-                Atualize as informações da aplicação.
+                Update application information.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="edit-name">Nome</Label>
+                <Label htmlFor="edit-name">Name</Label>
                 <Input
                   id="edit-name"
-                  placeholder="Nome da aplicação"
+                  placeholder="Application name"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   required
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-description">Descrição</Label>
+                <Label htmlFor="edit-description">Description</Label>
                 <Input
                   id="edit-description"
-                  placeholder="Descrição da aplicação"
+                  placeholder="Application description"
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                 />
@@ -244,12 +244,12 @@ export function ApplicationDetailPage() {
                 <Label htmlFor="edit-status">Status</Label>
                 <Select value={editStatus} onValueChange={(v) => setEditStatus(v as AppStatus)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o status" />
+                    <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="inactive">Inativo</SelectItem>
-                    <SelectItem value="maintenance">Manutenção</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -260,13 +260,13 @@ export function ApplicationDetailPage() {
                 variant="outline"
                 onClick={() => setIsEditDialogOpen(false)}
               >
-                Cancelar
+                Cancel
               </Button>
               <Button type="submit" disabled={updateAppMutation.isPending}>
                 {updateAppMutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Salvar
+                Save
               </Button>
             </DialogFooter>
           </form>
@@ -276,7 +276,7 @@ export function ApplicationDetailPage() {
       {/* Info */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Informações</CardTitle>
+          <CardTitle className="text-lg">Information</CardTitle>
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-2 gap-4 text-sm">
@@ -292,11 +292,11 @@ export function ApplicationDetailPage() {
               <dd>{app.auth_mode}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Criado em</dt>
+              <dt className="text-muted-foreground">Created at</dt>
               <dd>{formatDate(app.created_at)}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Atualizado em</dt>
+              <dt className="text-muted-foreground">Updated at</dt>
               <dd>{formatDate(app.updated_at)}</dd>
             </div>
           </dl>
@@ -310,11 +310,11 @@ export function ApplicationDetailPage() {
             <div>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Key className="h-5 w-5" />
-                Permissões Descobertas
+                Discovered Permissions
               </CardTitle>
               <CardDescription>
-                {permissions?.length || 0} permissões em{' '}
-                {Object.keys(permissionsByModule || {}).length} módulos
+                {permissions?.length || 0} permissions in{' '}
+                {Object.keys(permissionsByModule || {}).length} modules
               </CardDescription>
             </div>
           </div>
@@ -354,8 +354,7 @@ export function ApplicationDetailPage() {
             </div>
           ) : (
             <p className="text-muted-foreground text-center py-8">
-              Nenhuma permissão descoberta. Clique em "Sync Permissions" para
-              buscar.
+              No permissions discovered. Click "Sync Permissions" to fetch.
             </p>
           )}
         </CardContent>

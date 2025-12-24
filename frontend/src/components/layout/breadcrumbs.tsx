@@ -24,11 +24,11 @@ export function Breadcrumbs() {
     // Map segments to labels
     const labelMap: Record<string, string> = {
       tenants: 'Tenants',
-      applications: 'Aplicações',
+      applications: 'Applications',
       roles: 'Roles',
-      users: 'Usuários',
+      users: 'Users',
       audit: 'Audit Log',
-      permissions: 'Permissões',
+      permissions: 'Permissions',
     }
 
     const label = labelMap[segment] || segment

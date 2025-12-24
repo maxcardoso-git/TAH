@@ -95,71 +95,71 @@ export function ApplicationsListPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Aplicacoes</h1>
+          <h1 className="text-3xl font-bold">Applications</h1>
           <p className="text-muted-foreground">
-            Registry de aplicacoes integradas a plataforma
+            Registry of applications integrated with the platform
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Registrar Aplicacao
+              Register Application
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <form onSubmit={handleCreateApp}>
               <DialogHeader>
-                <DialogTitle>Registrar Nova Aplicacao</DialogTitle>
+                <DialogTitle>Register New Application</DialogTitle>
                 <DialogDescription>
-                  Adicione uma aplicacao ao registry da plataforma.
+                  Add an application to the platform registry.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="appName">Nome</Label>
+                  <Label htmlFor="appName">Name</Label>
                   <Input
                     id="appName"
-                    placeholder="Nome da aplicacao"
+                    placeholder="Application name"
                     value={newAppName}
                     onChange={(e) => handleNameChange(e.target.value)}
                     required
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="appId">ID da Aplicacao</Label>
+                  <Label htmlFor="appId">Application ID</Label>
                   <Input
                     id="appId"
-                    placeholder="minha_aplicacao"
+                    placeholder="my_application"
                     value={newAppId}
                     onChange={(e) => setNewAppId(e.target.value)}
                     className="font-mono"
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    Identificador unico (snake_case)
+                    Unique identifier (snake_case)
                   </p>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="appDescription">Descricao</Label>
+                  <Label htmlFor="appDescription">Description</Label>
                   <Input
                     id="appDescription"
-                    placeholder="Descricao da aplicacao"
+                    placeholder="Application description"
                     value={newAppDescription}
                     onChange={(e) => setNewAppDescription(e.target.value)}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="appBaseUrl">URL Base</Label>
+                  <Label htmlFor="appBaseUrl">Base URL</Label>
                   <Input
                     id="appBaseUrl"
-                    placeholder="https://api.exemplo.com"
+                    placeholder="https://api.example.com"
                     value={newAppBaseUrl}
                     onChange={(e) => setNewAppBaseUrl(e.target.value)}
                     type="url"
                   />
                   <p className="text-xs text-muted-foreground">
-                    URL para discovery de permissoes via /api/meta/access
+                    URL for permission discovery via /api/meta/access
                   </p>
                 </div>
               </div>
@@ -169,13 +169,13 @@ export function ApplicationsListPage() {
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
                 >
-                  Cancelar
+                  Cancel
                 </Button>
                 <Button type="submit" disabled={createAppMutation.isPending}>
                   {createAppMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Registrar
+                  Register
                 </Button>
               </DialogFooter>
             </form>
@@ -188,7 +188,7 @@ export function ApplicationsListPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar aplicacoes..."
+            placeholder="Search applications..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
@@ -214,13 +214,13 @@ export function ApplicationsListPage() {
       ) : data?.items.length === 0 ? (
         <Card className="p-12 text-center">
           <LayoutGrid className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-semibold">Nenhuma aplicacao registrada</h3>
+          <h3 className="mt-4 text-lg font-semibold">No applications registered</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            Registre sua primeira aplicacao para comecar.
+            Register your first application to get started.
           </p>
           <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Registrar Aplicacao
+            Register Application
           </Button>
         </Card>
       ) : (
@@ -256,7 +256,7 @@ export function ApplicationsListPage() {
                     {app.permissions_count !== undefined && (
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <Key className="h-4 w-4" />
-                        <span>{app.permissions_count} permissoes</span>
+                        <span>{app.permissions_count} permissions</span>
                       </div>
                     )}
                   </div>
