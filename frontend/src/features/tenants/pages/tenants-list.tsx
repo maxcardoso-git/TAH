@@ -68,7 +68,7 @@ export function TenantsListPage() {
     e.preventDefault()
     createTenantMutation.mutate({
       name: newTenantName,
-      slug: newTenantSlug || undefined,
+      slug: newTenantSlug ? newTenantSlug.toLowerCase() : undefined,
     })
   }
 

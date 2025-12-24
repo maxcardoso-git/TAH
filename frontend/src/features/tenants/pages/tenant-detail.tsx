@@ -85,7 +85,7 @@ export function TenantDetailPage() {
     e.preventDefault()
     updateTenantMutation.mutate({
       name: editName,
-      slug: editSlug || undefined,
+      slug: editSlug ? editSlug.toLowerCase() : undefined,
       status: editStatus,
     })
   }
