@@ -19,6 +19,12 @@ export function Header() {
   return (
     <header className="flex h-16 items-center justify-between border-b bg-background px-6">
       <div className="flex items-center gap-4">
+        <img
+          src="/logo.png"
+          alt="TAH"
+          className="h-8 w-auto"
+        />
+        <div className="h-6 w-px bg-border" />
         <Breadcrumbs />
 
         {currentTenant && (

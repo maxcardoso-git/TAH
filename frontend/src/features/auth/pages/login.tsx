@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Shield, Loader2, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle } from 'lucide-react'
 import apiClient from '@/api/client'
 
 export function LoginPage() {
@@ -71,11 +71,13 @@ export function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-primary/10 rounded-full">
-              <Shield className="h-8 w-8 text-primary" />
-            </div>
+            <img
+              src="/logo.png"
+              alt="TAH Logo"
+              className="h-16 w-auto"
+            />
           </div>
-          <CardTitle className="text-2xl">IAM Console</CardTitle>
+          <CardTitle className="text-2xl">Tenant Access Hub</CardTitle>
           <CardDescription>
             Access & Role Management Console
           </CardDescription>
