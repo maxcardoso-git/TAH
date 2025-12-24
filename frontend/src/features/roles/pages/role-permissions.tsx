@@ -151,7 +151,7 @@ export function RolePermissionsPage() {
     setHasChanges(true)
   }
 
-  const toggleFeatureAllActions = (featureId: string, actionKeys: string[]) => {
+  const toggleFeatureAllActions = (_featureId: string, actionKeys: string[]) => {
     const allSelected = actionKeys.every((k) => selectedPermissions.has(k))
     const newSelected = new Set(selectedPermissions)
 

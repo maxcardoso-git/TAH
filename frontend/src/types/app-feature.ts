@@ -37,6 +37,7 @@ export interface AppFeatureCreate {
   icon?: string
   actions?: string[]
   display_order?: number
+  is_active?: boolean
   is_public?: boolean
   requires_org?: boolean
 }
@@ -44,6 +45,7 @@ export interface AppFeatureCreate {
 export interface AppFeatureUpdate {
   name?: string
   description?: string
+  module?: string
   module_name?: string
   subcategory?: string
   path?: string
@@ -53,6 +55,7 @@ export interface AppFeatureUpdate {
   is_active?: boolean
   is_public?: boolean
   requires_org?: boolean
+  lifecycle?: FeatureLifecycle
 }
 
 // Manifest types
@@ -102,12 +105,13 @@ export interface FeatureWithActions {
   icon: string | null
   is_public: boolean
   requires_org: boolean
+  lifecycle: FeatureLifecycle
   actions: FeatureAction[]
 }
 
 export interface ModuleFeatures {
-  module_id: string
-  module_name: string
+  module_key: string
+  module_name: string | null
   features: FeatureWithActions[]
 }
 
@@ -132,8 +136,8 @@ export interface FeaturePermissionGrant {
 }
 
 export interface FeaturePermissionBatchUpdate {
-  grant: FeaturePermissionGrant[]
-  revoke: FeaturePermissionGrant[]
+  grant: string[]
+  revoke: string[]
 }
 
 // Sync types
