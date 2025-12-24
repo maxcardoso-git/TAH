@@ -25,7 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus, Search, User, Shield, Mail, Loader2, X } from 'lucide-react'
+import { Plus, Search, User, Shield, Mail, Loader2, X, Edit } from 'lucide-react'
 import { STATUS_COLORS } from '@/lib/constants'
 
 export function UsersListPage() {
@@ -36,6 +36,8 @@ export function UsersListPage() {
   const [inviteDisplayName, setInviteDisplayName] = useState('')
   const [manageUser, setManageUser] = useState<UserWithRoles | null>(null)
   const [selectedRoles, setSelectedRoles] = useState<string[]>([])
+  const [editUser, setEditUser] = useState<UserWithRoles | null>(null)
+  const [editDisplayName, setEditDisplayName] = useState('')
   const queryClient = useQueryClient()
 
   // Fetch available roles for the tenant
@@ -87,6 +89,34 @@ export function UsersListPage() {
       queryClient.invalidateQueries({ queryKey: ['users', tenantId] })
     },
   })
+
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ userId, displayName }: { userId: string; displayName: string }) => {
+      const response = await apiClient.patch(
+        `/tenants/${tenantId}/users/${userId}`,
+        { display_name: displayName }
+      )
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users', tenantId] })
+      setEditUser(null)
+    },
+  })
+
+  const openEditDialog = (user: UserWithRoles) => {
+    setEditUser(user)
+    setEditDisplayName(user.display_name || '')
+  }
+
+  const handleUpdateUser = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editUser) return
+    updateUserMutation.mutate({
+      userId: editUser.id,
+      displayName: editDisplayName,
+    })
+  }
 
   const handleInviteUser = (e: React.FormEvent) => {
     e.preventDefault()
@@ -323,6 +353,13 @@ export function UsersListPage() {
                     </Badge>
 
                     <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEditDialog(user)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleOpenManageDialog(user)}
@@ -336,6 +373,47 @@ export function UsersListPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit User Dialog */}
+      <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
+        <DialogContent>
+          <form onSubmit={handleUpdateUser}>
+            <DialogHeader>
+              <DialogTitle>Editar Usuário</DialogTitle>
+              <DialogDescription>
+                {editUser?.email}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-display-name">Nome de exibição</Label>
+                <Input
+                  id="edit-display-name"
+                  placeholder="Nome do usuário"
+                  value={editDisplayName}
+                  onChange={(e) => setEditDisplayName(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditUser(null)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={updateUserMutation.isPending}>
+                {updateUserMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Salvar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Manage User Roles Dialog */}
       <Dialog open={!!manageUser} onOpenChange={(open) => !open && handleCloseManageDialog()}>

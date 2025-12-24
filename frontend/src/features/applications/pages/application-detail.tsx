@@ -1,10 +1,13 @@
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '@/api/client'
-import { Application } from '@/types/application'
+import { Application, AppStatus, ApplicationUpdate } from '@/types/application'
 import { ExternalPermission } from '@/types/permission'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Card,
   CardContent,
@@ -12,7 +15,22 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { RefreshCw, Edit, Key, ExternalLink } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { RefreshCw, Edit, Key, ExternalLink, Loader2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { STATUS_COLORS } from '@/lib/constants'
 import { useToast } from '@/hooks/use-toast'
@@ -21,6 +39,12 @@ export function ApplicationDetailPage() {
   const { applicationId } = useParams<{ applicationId: string }>()
   const { toast } = useToast()
   const queryClient = useQueryClient()
+
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editBaseUrl, setEditBaseUrl] = useState('')
+  const [editStatus, setEditStatus] = useState<AppStatus>('active')
 
   const { data: app, isLoading } = useQuery({
     queryKey: ['application', applicationId],
@@ -62,6 +86,48 @@ export function ApplicationDetailPage() {
       })
     },
   })
+
+  const updateAppMutation = useMutation({
+    mutationFn: async (data: ApplicationUpdate) => {
+      const response = await apiClient.patch<Application>(
+        `/applications/${applicationId}`,
+        data
+      )
+      return response.data
+    },
+    onSuccess: () => {
+      toast({ title: 'Aplicação atualizada com sucesso' })
+      queryClient.invalidateQueries({ queryKey: ['application', applicationId] })
+      queryClient.invalidateQueries({ queryKey: ['applications'] })
+      setIsEditDialogOpen(false)
+    },
+    onError: () => {
+      toast({
+        title: 'Erro ao atualizar aplicação',
+        variant: 'destructive',
+      })
+    },
+  })
+
+  const openEditDialog = () => {
+    if (app) {
+      setEditName(app.name)
+      setEditDescription(app.description || '')
+      setEditBaseUrl(app.base_url)
+      setEditStatus(app.status)
+      setIsEditDialogOpen(true)
+    }
+  }
+
+  const handleUpdateApp = (e: React.FormEvent) => {
+    e.preventDefault()
+    updateAppMutation.mutate({
+      name: editName,
+      description: editDescription || undefined,
+      base_url: editBaseUrl,
+      status: editStatus,
+    })
+  }
 
   // Group permissions by module
   const permissionsByModule = permissions?.reduce(
@@ -127,12 +193,85 @@ export function ApplicationDetailPage() {
             />
             Sync Permissions
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={openEditDialog}>
             <Edit className="mr-2 h-4 w-4" />
             Editar
           </Button>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <form onSubmit={handleUpdateApp}>
+            <DialogHeader>
+              <DialogTitle>Editar Aplicação</DialogTitle>
+              <DialogDescription>
+                Atualize as informações da aplicação.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-name">Nome</Label>
+                <Input
+                  id="edit-name"
+                  placeholder="Nome da aplicação"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-description">Descrição</Label>
+                <Input
+                  id="edit-description"
+                  placeholder="Descrição da aplicação"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-base-url">Base URL</Label>
+                <Input
+                  id="edit-base-url"
+                  placeholder="https://api.exemplo.com"
+                  value={editBaseUrl}
+                  onChange={(e) => setEditBaseUrl(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-status">Status</Label>
+                <Select value={editStatus} onValueChange={(v) => setEditStatus(v as AppStatus)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="inactive">Inativo</SelectItem>
+                    <SelectItem value="maintenance">Manutenção</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={updateAppMutation.isPending}>
+                {updateAppMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Salvar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Info */}
       <Card>

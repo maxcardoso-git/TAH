@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient, { PaginatedResponse } from '@/api/client'
-import { Role } from '@/types/role'
+import { Role, RoleUpdate } from '@/types/role'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -23,7 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus, Search, Shield, Users, Key, Copy, Loader2 } from 'lucide-react'
+import { Plus, Search, Shield, Users, Key, Copy, Loader2, Edit } from 'lucide-react'
 import { formatRelativeDate } from '@/lib/utils'
 import { STATUS_COLORS } from '@/lib/constants'
 
@@ -33,6 +33,9 @@ export function RolesListPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [newRoleName, setNewRoleName] = useState('')
   const [newRoleDescription, setNewRoleDescription] = useState('')
+  const [editRole, setEditRole] = useState<Role | null>(null)
+  const [editRoleName, setEditRoleName] = useState('')
+  const [editRoleDescription, setEditRoleDescription] = useState('')
   const queryClient = useQueryClient()
 
   const createRoleMutation = useMutation({
@@ -53,6 +56,38 @@ export function RolesListPage() {
     createRoleMutation.mutate({
       name: newRoleName,
       description: newRoleDescription || undefined,
+    })
+  }
+
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ roleId, data }: { roleId: string; data: RoleUpdate }) => {
+      const response = await apiClient.patch<Role>(
+        `/tenants/${tenantId}/roles/${roleId}`,
+        data
+      )
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles', tenantId] })
+      setEditRole(null)
+    },
+  })
+
+  const openEditDialog = (role: Role) => {
+    setEditRole(role)
+    setEditRoleName(role.name)
+    setEditRoleDescription(role.description || '')
+  }
+
+  const handleUpdateRole = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editRole) return
+    updateRoleMutation.mutate({
+      roleId: editRole.id,
+      data: {
+        name: editRoleName,
+        description: editRoleDescription || undefined,
+      },
     })
   }
 
@@ -224,6 +259,14 @@ export function RolesListPage() {
                     variant="ghost"
                     size="sm"
                     disabled={role.is_system}
+                    onClick={() => openEditDialog(role)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={role.is_system}
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -233,6 +276,56 @@ export function RolesListPage() {
           ))}
         </div>
       )}
+
+      {/* Edit Role Dialog */}
+      <Dialog open={!!editRole} onOpenChange={(open) => !open && setEditRole(null)}>
+        <DialogContent>
+          <form onSubmit={handleUpdateRole}>
+            <DialogHeader>
+              <DialogTitle>Editar Role</DialogTitle>
+              <DialogDescription>
+                Atualize as informações do role.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-name">Nome</Label>
+                <Input
+                  id="edit-name"
+                  placeholder="Nome do role"
+                  value={editRoleName}
+                  onChange={(e) => setEditRoleName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-description">Descrição</Label>
+                <Input
+                  id="edit-description"
+                  placeholder="Descrição do role (opcional)"
+                  value={editRoleDescription}
+                  onChange={(e) => setEditRoleDescription(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditRole(null)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={updateRoleMutation.isPending}>
+                {updateRoleMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Salvar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

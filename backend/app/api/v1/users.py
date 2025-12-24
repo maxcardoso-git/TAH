@@ -16,7 +16,7 @@ from app.models.user import User, UserRole, UserTenant, UserTenantStatus
 from app.schemas.common import PaginatedResponse
 from app.schemas.permission import EffectivePermissions
 from app.schemas.role import RoleSummary
-from app.schemas.user import UserInvite, UserInviteResponse, UserRoleAssign, UserRoleRead, UserTenantRead, UserWithRoles
+from app.schemas.user import UserInvite, UserInviteResponse, UserRead, UserRoleAssign, UserRoleRead, UserTenantRead, UserUpdate, UserWithRoles
 
 router = APIRouter()
 
@@ -162,6 +162,41 @@ async def invite_user_to_tenant(
         invite_url=invite_url,
         expires_at=expires_at,
     )
+
+
+@router.patch("/{user_id}", response_model=UserRead)
+async def update_user(
+    db: DbSession,
+    _: Annotated[TokenPayload, Depends(get_token_payload)],
+    tenant_id: UUID,
+    user_id: UUID,
+    data: UserUpdate,
+):
+    """Update a user's information."""
+    # Verify user is member of tenant
+    user_tenant = await db.scalar(
+        select(UserTenant).where(
+            UserTenant.tenant_id == tenant_id,
+            UserTenant.user_id == user_id,
+        )
+    )
+    if not user_tenant:
+        raise NotFoundError(detail=f"User {user_id} not found in tenant")
+
+    # Get user
+    user = await db.get(User, user_id)
+    if not user:
+        raise NotFoundError(detail=f"User {user_id} not found")
+
+    # Update fields
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(user, field, value)
+
+    await db.flush()
+    await db.refresh(user)
+
+    return UserRead.model_validate(user)
 
 
 @router.get("/{user_id}/roles", response_model=list[UserRoleRead])
