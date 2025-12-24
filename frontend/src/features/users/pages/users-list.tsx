@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient, { PaginatedResponse } from '@/api/client'
 import { UserWithRoles } from '@/types/user'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import {
   Card,
   CardContent,
@@ -13,12 +14,49 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Plus, Search, User, Shield, Mail } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Plus, Search, User, Shield, Mail, Loader2 } from 'lucide-react'
 import { STATUS_COLORS } from '@/lib/constants'
 
 export function UsersListPage() {
   const { tenantId } = useParams<{ tenantId: string }>()
   const [search, setSearch] = useState('')
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteDisplayName, setInviteDisplayName] = useState('')
+  const queryClient = useQueryClient()
+
+  const inviteUserMutation = useMutation({
+    mutationFn: async (data: { email: string; display_name?: string }) => {
+      const response = await apiClient.post<UserWithRoles>(
+        `/tenants/${tenantId}/users/invite`,
+        data
+      )
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users', tenantId] })
+      setIsDialogOpen(false)
+      setInviteEmail('')
+      setInviteDisplayName('')
+    },
+  })
+
+  const handleInviteUser = (e: React.FormEvent) => {
+    e.preventDefault()
+    inviteUserMutation.mutate({
+      email: inviteEmail,
+      display_name: inviteDisplayName || undefined,
+    })
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['users', tenantId, search],
@@ -44,10 +82,61 @@ export function UsersListPage() {
             Gerencie os usuários e suas atribuições de roles
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Convidar Usuário
-        </Button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Convidar Usuário
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <form onSubmit={handleInviteUser}>
+              <DialogHeader>
+                <DialogTitle>Convidar Usuário</DialogTitle>
+                <DialogDescription>
+                  Convide um novo usuário para este tenant.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="usuario@exemplo.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="displayName">Nome (opcional)</Label>
+                  <Input
+                    id="displayName"
+                    placeholder="Nome do usuario"
+                    value={inviteDisplayName}
+                    onChange={(e) => setInviteDisplayName(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={inviteUserMutation.isPending}>
+                  {inviteUserMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Convidar
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Search */}

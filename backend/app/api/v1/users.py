@@ -14,7 +14,7 @@ from app.models.user import User, UserRole, UserTenant, UserTenantStatus
 from app.schemas.common import PaginatedResponse
 from app.schemas.permission import EffectivePermissions
 from app.schemas.role import RoleSummary
-from app.schemas.user import UserRoleAssign, UserRoleRead, UserTenantRead, UserWithRoles
+from app.schemas.user import UserInvite, UserRoleAssign, UserRoleRead, UserTenantRead, UserWithRoles
 
 router = APIRouter()
 
@@ -84,6 +84,59 @@ async def list_tenant_users(
         page=page,
         page_size=page_size,
     )
+
+
+@router.post("/invite", response_model=UserWithRoles, status_code=status.HTTP_201_CREATED)
+async def invite_user_to_tenant(
+    db: DbSession,
+    token: Annotated[TokenPayload, Depends(get_token_payload)],
+    tenant_id: UUID,
+    data: UserInvite,
+):
+    """Invite a user to the tenant by email."""
+    # Check if user already exists
+    existing_user = await db.scalar(
+        select(User).where(User.email == data.email)
+    )
+
+    if existing_user:
+        # Check if already member of tenant
+        existing_membership = await db.scalar(
+            select(UserTenant).where(
+                UserTenant.tenant_id == tenant_id,
+                UserTenant.user_id == existing_user.id,
+            )
+        )
+        if existing_membership:
+            raise ConflictError(detail=f"User {data.email} is already a member of this tenant")
+        user = existing_user
+    else:
+        # Create new user
+        user = User(
+            email=data.email,
+            display_name=data.display_name,
+            status="active",
+        )
+        db.add(user)
+        await db.flush()
+        await db.refresh(user)
+
+    # Create tenant membership
+    inviter_id = UUID(token.user_id) if token.user_id else None
+    user_tenant = UserTenant(
+        tenant_id=tenant_id,
+        user_id=user.id,
+        status=UserTenantStatus.INVITED,
+        invited_by=inviter_id,
+    )
+    db.add(user_tenant)
+    await db.flush()
+
+    # Return user with roles (empty for new invite)
+    user_data = UserWithRoles.model_validate(user)
+    user_data.tenant_status = UserTenantStatus.INVITED
+    user_data.roles = []
+    return user_data
 
 
 @router.get("/{user_id}/roles", response_model=list[UserRoleRead])

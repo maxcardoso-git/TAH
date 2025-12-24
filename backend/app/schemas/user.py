@@ -1,7 +1,8 @@
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
-from pydantic import EmailStr, Field
+from pydantic import EmailStr, Field, field_validator
 
 from app.models.user import UserTenantStatus
 from app.schemas.common import BaseSchema
@@ -14,6 +15,15 @@ class UserBase(BaseSchema):
     email: EmailStr | None = None
     display_name: str | None = None
     metadata_: dict = Field(default_factory=dict, alias="metadata")
+
+    @field_validator("metadata_", mode="before")
+    @classmethod
+    def ensure_dict(cls, v: Any) -> dict:
+        if v is None:
+            return {}
+        if isinstance(v, dict):
+            return v
+        return dict(v) if hasattr(v, "__iter__") else {}
 
 
 class UserCreate(UserBase):
@@ -50,6 +60,13 @@ class UserTenantCreate(UserTenantBase):
     """Schema for adding user to tenant."""
 
     user_id: UUID
+
+
+class UserInvite(BaseSchema):
+    """Schema for inviting a user to a tenant."""
+
+    email: EmailStr = Field(..., description="Email do usuario a convidar")
+    display_name: str | None = Field(None, description="Nome de exibicao")
 
 
 class UserTenantRead(UserTenantBase):
