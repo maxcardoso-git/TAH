@@ -5,6 +5,13 @@ from pydantic import Field
 from app.schemas.common import BaseSchema
 
 
+class LoginRequest(BaseSchema):
+    """Request for dev login by email."""
+
+    email: str = Field(..., description="Email do usuário")
+    tenant_id: UUID | None = Field(None, description="Tenant para contexto (opcional)")
+
+
 class TokenRequest(BaseSchema):
     """Request for token generation (for testing/development)."""
 

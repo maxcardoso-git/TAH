@@ -10,14 +10,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Shield, Loader2 } from 'lucide-react'
+import { Shield, Loader2, AlertCircle } from 'lucide-react'
 import apiClient from '@/api/client'
 
 export function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -27,26 +26,15 @@ export function LoginPage() {
     setError('')
 
     try {
-      const response = await apiClient.post('/auth/token', {
-        username: email,
-        password,
-      }, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        transformRequest: [(data) => {
-          const params = new URLSearchParams()
-          for (const key in data) {
-            params.append(key, data[key])
-          }
-          return params
-        }],
+      const response = await apiClient.post('/auth/login', {
+        email,
       })
 
       login(response.data.access_token)
       navigate('/tenants')
-    } catch {
-      setError('Credenciais invalidas. Tente novamente.')
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } }
+      setError(error.response?.data?.detail || 'Erro ao fazer login. Verifique o email.')
     } finally {
       setIsLoading(false)
     }
@@ -95,24 +83,18 @@ export function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                autoFocus
               />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                Senha
-              </label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="********"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <p className="text-xs text-muted-foreground">
+                Use o email de um usuário cadastrado no sistema
+              </p>
             </div>
 
             {error && (
-              <p className="text-sm text-red-500">{error}</p>
+              <div className="flex items-center gap-2 p-3 text-sm text-red-500 bg-red-50 rounded-md">
+                <AlertCircle className="h-4 w-4" />
+                {error}
+              </div>
             )}
 
             <Button type="submit" className="w-full" disabled={isLoading}>
@@ -138,9 +120,13 @@ export function LoginPage() {
               variant="outline"
               className="w-full mt-4"
               onClick={handleDemoLogin}
+              disabled={isLoading}
             >
               Entrar como Demo
             </Button>
+            <p className="text-xs text-center text-muted-foreground mt-2">
+              Cria um usuário demo com acesso admin
+            </p>
           </div>
         </CardContent>
       </Card>

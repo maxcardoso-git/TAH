@@ -11,9 +11,84 @@ from app.core.exceptions import NotFoundError
 from app.core.security import TokenPayload, create_access_token, create_refresh_token
 from app.models.role import Role, RolePermission
 from app.models.user import User, UserRole, UserTenant
-from app.schemas.auth import AccessContext, TokenRequest, TokenResponse, UserInfo
+from app.schemas.auth import AccessContext, LoginRequest, TokenRequest, TokenResponse, UserInfo
 
 router = APIRouter()
+
+
+@router.post("/login", response_model=TokenResponse)
+async def login(db: DbSession, data: LoginRequest):
+    """
+    Login by email (development mode - no password required).
+    Returns a JWT token for the user.
+    WARNING: Only use in development/testing environments!
+    """
+    # Find user by email
+    result = await db.execute(select(User).where(User.email == data.email))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise NotFoundError(detail=f"Usuário com email {data.email} não encontrado")
+
+    # Get user's roles and permissions for the tenant (if provided)
+    roles: list[str] = ["admin"]  # Default admin for dev
+    permissions: list[str] = ["*"]
+
+    if data.tenant_id:
+        # Check if user is member of tenant
+        membership = await db.scalar(
+            select(UserTenant).where(
+                UserTenant.user_id == user.id,
+                UserTenant.tenant_id == data.tenant_id,
+            )
+        )
+        if not membership:
+            raise NotFoundError(detail=f"Usuário não é membro do tenant {data.tenant_id}")
+
+        # Get user's roles in this tenant
+        roles_query = (
+            select(Role.name)
+            .join(UserRole)
+            .where(
+                UserRole.tenant_id == data.tenant_id,
+                UserRole.user_id == user.id,
+                Role.deleted_at.is_(None),
+            )
+        )
+        roles_result = await db.execute(roles_query)
+        roles = list(roles_result.scalars().all()) or ["user"]
+
+        # Get permissions from roles
+        role_ids_query = select(UserRole.role_id).where(
+            UserRole.tenant_id == data.tenant_id,
+            UserRole.user_id == user.id,
+        )
+        role_ids_result = await db.execute(role_ids_query)
+        role_ids = list(role_ids_result.scalars().all())
+
+        if role_ids:
+            perms_query = select(RolePermission.permission_key).where(
+                RolePermission.role_id.in_(role_ids)
+            )
+            perms_result = await db.execute(perms_query)
+            permissions = list(set(perms_result.scalars().all()))
+
+    # Create tokens
+    access_token = create_access_token(
+        subject=str(user.id),
+        tenant_id=str(data.tenant_id) if data.tenant_id else None,
+        roles=roles,
+        permissions=permissions,
+    )
+
+    refresh_token = create_refresh_token(subject=str(user.id))
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+        expires_in=settings.access_token_expire_minutes * 60,
+    )
 
 
 @router.post("/dev-token", response_model=TokenResponse)

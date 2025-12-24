@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { useTenant } from '@/contexts/tenant-context'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
@@ -6,8 +7,14 @@ import { LogOut, User } from 'lucide-react'
 import { Breadcrumbs } from './breadcrumbs'
 
 export function Header() {
+  const navigate = useNavigate()
   const { currentTenant } = useTenant()
   const { user, logout } = useAuth()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-background px-6">
@@ -31,7 +38,7 @@ export function Header() {
           </div>
         )}
 
-        <Button variant="ghost" size="icon" onClick={logout}>
+        <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
           <LogOut className="h-4 w-4" />
         </Button>
       </div>
