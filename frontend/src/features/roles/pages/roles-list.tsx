@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient, { PaginatedResponse } from '@/api/client'
 import { Role } from '@/types/role'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import {
   Card,
   CardContent,
@@ -13,13 +14,47 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Plus, Search, Shield, Users, Key, Copy } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Plus, Search, Shield, Users, Key, Copy, Loader2 } from 'lucide-react'
 import { formatRelativeDate } from '@/lib/utils'
 import { STATUS_COLORS } from '@/lib/constants'
 
 export function RolesListPage() {
   const { tenantId } = useParams<{ tenantId: string }>()
   const [search, setSearch] = useState('')
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [newRoleName, setNewRoleName] = useState('')
+  const [newRoleDescription, setNewRoleDescription] = useState('')
+  const queryClient = useQueryClient()
+
+  const createRoleMutation = useMutation({
+    mutationFn: async (data: { name: string; description?: string }) => {
+      const response = await apiClient.post<Role>(`/tenants/${tenantId}/roles`, data)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles', tenantId] })
+      setIsDialogOpen(false)
+      setNewRoleName('')
+      setNewRoleDescription('')
+    },
+  })
+
+  const handleCreateRole = (e: React.FormEvent) => {
+    e.preventDefault()
+    createRoleMutation.mutate({
+      name: newRoleName,
+      description: newRoleDescription || undefined,
+    })
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['roles', tenantId, search],
@@ -45,10 +80,60 @@ export function RolesListPage() {
             Gerencie os perfis de acesso do tenant
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Role
-        </Button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Role
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <form onSubmit={handleCreateRole}>
+              <DialogHeader>
+                <DialogTitle>Criar Novo Role</DialogTitle>
+                <DialogDescription>
+                  Crie um novo perfil de acesso para o tenant.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Nome</Label>
+                  <Input
+                    id="name"
+                    placeholder="Ex: Administrador, Editor, Viewer"
+                    value={newRoleName}
+                    onChange={(e) => setNewRoleName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="description">Descricao</Label>
+                  <Input
+                    id="description"
+                    placeholder="Descricao do role (opcional)"
+                    value={newRoleDescription}
+                    onChange={(e) => setNewRoleDescription(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={createRoleMutation.isPending}>
+                  {createRoleMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Criar Role
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Search */}

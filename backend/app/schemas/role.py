@@ -1,7 +1,8 @@
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from app.models.role import RoleStatus
 from app.schemas.common import BaseSchema
@@ -13,6 +14,15 @@ class RoleBase(BaseSchema):
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
     metadata_: dict = Field(default_factory=dict, alias="metadata")
+
+    @field_validator("metadata_", mode="before")
+    @classmethod
+    def ensure_dict(cls, v: Any) -> dict:
+        if v is None:
+            return {}
+        if isinstance(v, dict):
+            return v
+        return dict(v) if hasattr(v, "__iter__") else {}
 
 
 class RoleCreate(RoleBase):
