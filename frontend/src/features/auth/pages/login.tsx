@@ -35,8 +35,16 @@ export function LoginPage() {
       login(response.data.access_token)
       navigate('/tenants')
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || 'Erro ao fazer login. Verifique suas credenciais.')
+      const error = err as { response?: { data?: { detail?: string | Array<{ msg: string }> } } }
+      const detail = error.response?.data?.detail
+      // Handle both string errors and FastAPI validation error arrays
+      if (typeof detail === 'string') {
+        setError(detail)
+      } else if (Array.isArray(detail) && detail.length > 0) {
+        setError(detail[0].msg || 'Erro de validação')
+      } else {
+        setError('Erro ao fazer login. Verifique suas credenciais.')
+      }
     } finally {
       setIsLoading(false)
     }
