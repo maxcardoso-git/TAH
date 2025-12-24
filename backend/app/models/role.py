@@ -39,7 +39,12 @@ class Role(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(String)
     status: Mapped[RoleStatus] = mapped_column(
-        Enum(RoleStatus, name="role_status", create_type=False),
+        Enum(
+            RoleStatus,
+            name="role_status",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         nullable=False,
         default=RoleStatus.ACTIVE,
     )

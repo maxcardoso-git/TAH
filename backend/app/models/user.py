@@ -94,7 +94,12 @@ class UserTenant(Base):
         index=True,
     )
     status: Mapped[UserTenantStatus] = mapped_column(
-        Enum(UserTenantStatus, name="user_tenant_status", create_type=False),
+        Enum(
+            UserTenantStatus,
+            name="user_tenant_status",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         nullable=False,
         default=UserTenantStatus.ACTIVE,
     )

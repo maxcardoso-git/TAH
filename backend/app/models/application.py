@@ -31,7 +31,12 @@ class Application(Base):
     description: Mapped[str | None] = mapped_column(String)
     base_url: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[AppStatus] = mapped_column(
-        Enum(AppStatus, name="app_status", create_type=False),
+        Enum(
+            AppStatus,
+            name="app_status",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         nullable=False,
         default=AppStatus.ACTIVE,
     )
@@ -95,7 +100,12 @@ class TenantApplication(Base):
         index=True,
     )
     status: Mapped[AppStatus] = mapped_column(
-        Enum(AppStatus, name="app_status", create_type=False),
+        Enum(
+            AppStatus,
+            name="app_status",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         nullable=False,
         default=AppStatus.ACTIVE,
     )
