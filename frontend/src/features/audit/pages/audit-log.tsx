@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/card'
 import { Search, Download, ChevronDown, ChevronRight } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import { cn } from '@/lib/utils'
 
 const ACTION_COLORS: Record<AuditAction, string> = {
   CREATE: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',

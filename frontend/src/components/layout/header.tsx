@@ -1,4 +1,3 @@
-import { useLocation } from 'react-router-dom'
 import { useTenant } from '@/contexts/tenant-context'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'

@@ -20,7 +20,7 @@ import { STATUS_COLORS } from '@/lib/constants'
 export function ApplicationsListPage() {
   const [search, setSearch] = useState('')
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['applications', search],
     queryFn: async () => {
       const response = await apiClient.get<PaginatedResponse<Application>>(

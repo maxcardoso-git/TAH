@@ -1,5 +1,3 @@
-import { Role } from './role'
-
 export type UserTenantStatus = 'active' | 'invited' | 'suspended' | 'revoked'
 
 export interface User {
