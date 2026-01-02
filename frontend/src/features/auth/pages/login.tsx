@@ -32,7 +32,8 @@ export function LoginPage() {
         password,
       })
 
-      login(response.data.access_token)
+      // Pass both access_token and refresh_token to login
+      login(response.data.access_token, response.data.refresh_token)
       navigate('/select-tenant')
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string | Array<{ msg: string }> } } }
@@ -57,7 +58,8 @@ export function LoginPage() {
 
     try {
       const response = await apiClient.post('/auth/dev-token')
-      login(response.data.access_token)
+      // Pass both access_token and refresh_token to login
+      login(response.data.access_token, response.data.refresh_token)
       navigate('/select-tenant')
     } catch {
       setError('Error creating demo session.')

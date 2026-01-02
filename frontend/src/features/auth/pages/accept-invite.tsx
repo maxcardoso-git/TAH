@@ -53,7 +53,8 @@ export function AcceptInvitePage() {
         password,
       })
 
-      login(response.data.access_token)
+      // Pass both access_token and refresh_token to login
+      login(response.data.access_token, response.data.refresh_token)
       setSuccess(true)
 
       // Redirect to tenants after a brief success message

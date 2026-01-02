@@ -15,6 +15,7 @@ class ManifestModule(BaseSchema):
     id: str
     name: str
     description: str | None = None
+    granted: bool = False
     display_order: int = 0
 
 
@@ -24,6 +25,7 @@ class ManifestFeature(BaseSchema):
     id: str  # e.g., "orchestrator.projects"
     name: str
     description: str | None = None
+    granted: bool = False
     module: str  # e.g., "core"
     subcategory: str | None = None
     parent_id: str | None = None
@@ -43,7 +45,7 @@ class AppFeaturesManifest(BaseSchema):
     version: str
     modules: list[ManifestModule]
     features: list[ManifestFeature]
-    generated_at: datetime
+    generated_at: datetime | None = None
 
 
 # ==================== CRUD Schemas ====================
@@ -54,6 +56,7 @@ class AppFeatureBase(BaseSchema):
 
     name: str
     description: str | None = None
+    granted: bool = False
     module: str
     module_name: str | None = None
     subcategory: str | None = None
@@ -77,6 +80,7 @@ class AppFeatureUpdate(BaseSchema):
 
     name: str | None = None
     description: str | None = None
+    granted: bool = False
     module_name: str | None = None
     subcategory: str | None = None
     path: str | None = None
@@ -115,6 +119,7 @@ class FeatureAction(BaseSchema):
     action: str  # e.g., "read", "create", "update", "delete"
     permission_key: str  # e.g., "orchestrator.projects:read"
     description: str | None = None
+    granted: bool = False
 
 
 class FeatureWithActions(BaseSchema):
@@ -123,10 +128,12 @@ class FeatureWithActions(BaseSchema):
     id: str
     name: str
     description: str | None = None
+    granted: bool = False
     path: str
     icon: str | None = None
     is_public: bool
     requires_org: bool
+    lifecycle: FeatureLifecycle = FeatureLifecycle.ACTIVE
     actions: list[FeatureAction]
 
 
@@ -204,5 +211,54 @@ class FeaturePermissionGrant(BaseSchema):
 class FeaturePermissionBatchUpdate(BaseSchema):
     """Schema for batch updating role permissions with features."""
 
-    grant: list[FeaturePermissionGrant] = Field(default_factory=list)
-    revoke: list[FeaturePermissionGrant] = Field(default_factory=list)
+    grant: list[str] = Field(default_factory=list)  # List of "feature_id:action" strings
+    revoke: list[str] = Field(default_factory=list)  # List of "feature_id:action" strings
+
+
+# ==================== Bulk Operation Schemas ====================
+
+
+class BulkSyncRequest(BaseSchema):
+    """Request for bulk syncing multiple applications."""
+    
+    application_ids: list[str] | None = Field(
+        default=None,
+        description="List of application IDs to sync. If empty, syncs all active applications."
+    )
+    force: bool = Field(default=False, description="Force sync even if up to date")
+
+
+class AppSyncResult(BaseSchema):
+    """Result of syncing a single application."""
+    
+    application_id: str
+    application_name: str
+    status: str  # "success", "error", "skipped"
+    app_version: str | None = None
+    summary: FeatureSyncSummary | None = None
+    error_message: str | None = None
+
+
+class BulkSyncResponse(BaseSchema):
+    """Response from bulk sync operation."""
+    
+    total_apps: int
+    successful: int
+    failed: int
+    skipped: int
+    results: list[AppSyncResult]
+
+
+class BulkDeleteRequest(BaseSchema):
+    """Request for bulk deleting features."""
+    
+    feature_ids: list[str] = Field(..., min_length=1, description="List of feature IDs to delete")
+
+
+class BulkDeleteResponse(BaseSchema):
+    """Response from bulk delete operation."""
+    
+    total_requested: int
+    deleted: int
+    not_found: int
+    errors: list[str] = Field(default_factory=list)

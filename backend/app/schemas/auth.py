@@ -57,6 +57,26 @@ class AccessContext(BaseSchema):
     applications: list[str]
 
 
+
+
+class AppTokenRequest(BaseSchema):
+    """Request for generating an application-specific RS256 token."""
+
+    application_id: str = Field(..., description="Target application ID (e.g., 'orchestratorai')")
+    tenant_id: UUID | None = Field(None, description="Tenant context (uses token's tenant if not provided)")
+    scopes: list[str] = Field(default_factory=list, description="Requested scopes (optional)")
+
+
+class AppTokenResponse(BaseSchema):
+    """Response with RS256 signed token for external application."""
+
+    access_token: str = Field(..., description="RS256 signed JWT for the target application")
+    token_type: str = "bearer"
+    expires_in: int = Field(..., description="Token expiration in seconds")
+    application_id: str = Field(..., description="Target application ID")
+    permissions: list[str] = Field(default_factory=list, description="Permissions included in the token")
+
+
 class UserInfo(BaseSchema):
     """Current user information."""
 
@@ -65,3 +85,21 @@ class UserInfo(BaseSchema):
     display_name: str | None = None
     tenant_id: UUID | None = None
     roles: list[str] = []
+
+
+class CheckEmailRequest(BaseSchema):
+    """Request to check email status."""
+    email: str = Field(..., description="Email to check")
+
+
+class CheckEmailResponse(BaseSchema):
+    """Response with email status."""
+    exists: bool
+    has_password: bool
+    status: str | None = None
+
+
+class SetPasswordRequest(BaseSchema):
+    """Request to set first password."""
+    email: str = Field(..., description="Email do usuário")
+    password: str = Field(..., min_length=6, description="Nova senha (min 6 caracteres)")

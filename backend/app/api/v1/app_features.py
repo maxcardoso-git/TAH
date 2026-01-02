@@ -1,5 +1,6 @@
+import re
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, Any
 
 import httpx
 from fastapi import APIRouter, Depends, Query, status
@@ -13,6 +14,11 @@ from app.models.app_feature import AppFeature, FeatureLifecycle
 from app.models.application import Application
 from app.models.external_permission import PermissionSyncRun
 from app.schemas.app_feature import (
+    AppSyncResult,
+    BulkDeleteRequest,
+    BulkDeleteResponse,
+    BulkSyncRequest,
+    BulkSyncResponse,
     AppFeatureCreate,
     AppFeatureRead,
     AppFeatureUpdate,
@@ -23,6 +29,21 @@ from app.schemas.app_feature import (
 )
 
 router = APIRouter()
+
+
+def _camel_to_snake(name: str) -> str:
+    """Convert camelCase to snake_case."""
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+
+def _convert_keys_to_snake_case(data: Any) -> Any:
+    """Recursively convert all dictionary keys from camelCase to snake_case."""
+    if isinstance(data, dict):
+        return {_camel_to_snake(k): _convert_keys_to_snake_case(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [_convert_keys_to_snake_case(item) for item in data]
+    return data
 
 
 @router.get("", response_model=list[AppFeatureRead])
@@ -314,6 +335,13 @@ async def sync_app_features(
             response.raise_for_status()
             manifest_data = response.json()
 
+        # Handle wrapped responses (e.g., {"success": true, "data": {...}})
+        if isinstance(manifest_data, dict) and "data" in manifest_data:
+            manifest_data = manifest_data["data"]
+
+        # Convert camelCase keys to snake_case
+        manifest_data = _convert_keys_to_snake_case(manifest_data)
+
         manifest = AppFeaturesManifest(**manifest_data)
 
         # Process features
@@ -435,3 +463,152 @@ async def _process_manifest(
                 summary.deprecated += 1
 
     return summary
+
+
+@router.post("/bulk-sync", response_model=BulkSyncResponse)
+async def bulk_sync_app_features(
+    db: DbSession,
+    token: Annotated[TokenPayload, Depends(get_token_payload)],
+    application_id: str,
+    request: BulkSyncRequest,
+):
+    """
+    Sync features from multiple applications at once.
+    If application_ids is empty, syncs all active applications.
+    """
+    from app.models.application import AppStatus
+    
+    # Get applications to sync
+    if request.application_ids:
+        query = select(Application).where(Application.id.in_(request.application_ids))
+    else:
+        query = select(Application).where(Application.status == AppStatus.ACTIVE)
+    
+    result = await db.execute(query)
+    applications = result.scalars().all()
+    
+    results: list[AppSyncResult] = []
+    successful = 0
+    failed = 0
+    skipped = 0
+    
+    for app in applications:
+        try:
+            # Check if app has manifest URL
+            if not app.features_manifest_url and not app.base_url:
+                results.append(AppSyncResult(
+                    application_id=app.id,
+                    application_name=app.name,
+                    status="skipped",
+                    error_message="No manifest URL or base URL configured"
+                ))
+                skipped += 1
+                continue
+            
+            # Fetch manifest
+            if app.features_manifest_url:
+                manifest_url = app.features_manifest_url
+            else:
+                base = app.base_url.rstrip("/")
+                manifest_url = f"{base}/api/v1/app-features/manifest"
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(manifest_url)
+                response.raise_for_status()
+                manifest_data = response.json()
+            
+            # Handle wrapped responses
+            if isinstance(manifest_data, dict) and "data" in manifest_data:
+                manifest_data = manifest_data["data"]
+            
+            # Convert camelCase to snake_case
+            manifest_data = _convert_keys_to_snake_case(manifest_data)
+            
+            manifest = AppFeaturesManifest(**manifest_data)
+            
+            # Process features
+            summary = await _process_manifest(db, app, manifest)
+            
+            # Update application version
+            app.current_version = manifest.version
+            
+            results.append(AppSyncResult(
+                application_id=app.id,
+                application_name=app.name,
+                status="success",
+                app_version=manifest.version,
+                summary=summary
+            ))
+            successful += 1
+            
+        except httpx.HTTPError as e:
+            results.append(AppSyncResult(
+                application_id=app.id,
+                application_name=app.name,
+                status="error",
+                error_message=f"HTTP error: {str(e)}"
+            ))
+            failed += 1
+        except Exception as e:
+            results.append(AppSyncResult(
+                application_id=app.id,
+                application_name=app.name,
+                status="error",
+                error_message=str(e)
+            ))
+            failed += 1
+    
+    await db.flush()
+    
+    return BulkSyncResponse(
+        total_apps=len(applications),
+        successful=successful,
+        failed=failed,
+        skipped=skipped,
+        results=results
+    )
+
+
+@router.delete("/bulk", response_model=BulkDeleteResponse)
+async def bulk_delete_app_features(
+    db: DbSession,
+    _: Annotated[TokenPayload, Depends(get_token_payload)],
+    application_id: str,
+    request: BulkDeleteRequest,
+):
+    """
+    Delete multiple features at once.
+    Only deletes features that belong to the specified application.
+    """
+    
+    deleted = 0
+    not_found = 0
+    errors: list[str] = []
+    
+    for feature_id in request.feature_ids:
+        try:
+            feature = await db.get(AppFeature, feature_id)
+            
+            if not feature:
+                not_found += 1
+                errors.append(f"Feature '{feature_id}' not found")
+                continue
+            
+            if feature.application_id != application_id:
+                errors.append(f"Feature '{feature_id}' belongs to different application")
+                continue
+            
+            await db.delete(feature)
+            deleted += 1
+            
+        except Exception as e:
+            errors.append(f"Error deleting '{feature_id}': {str(e)}")
+    
+    await db.flush()
+    
+    return BulkDeleteResponse(
+        total_requested=len(request.feature_ids),
+        deleted=deleted,
+        not_found=not_found,
+        errors=errors
+    )
