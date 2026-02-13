@@ -177,14 +177,15 @@ export function AppLauncherPage() {
     })
   }
 
-  if (!currentTenant) {
-    navigate("/select-tenant")
-    return null
-  }
-
   const canAccessAdmin = Boolean(data?.can_access_admin)
   const userDisplayName = data?.current_user_name || user?.display_name || user?.email || "User"
   const currentRoles = data?.current_user_roles || []
+
+  useEffect(() => {
+    if (!currentTenant) {
+      navigate("/select-tenant", { replace: true })
+    }
+  }, [currentTenant, navigate])
 
   useEffect(() => {
     if (!currentTenant?.id) {
@@ -199,6 +200,10 @@ export function AppLauncherPage() {
       // ignore storage issues
     }
   }, [currentTenant?.id, canAccessAdmin])
+
+  if (!currentTenant) {
+    return null
+  }
 
   if (isLoading) {
     return (
