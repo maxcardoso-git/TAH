@@ -19,6 +19,7 @@ import {
   Cog,
   Sparkles,
   User,
+  LogOut,
 } from "lucide-react"
 
 interface AppLauncherItem {
@@ -114,7 +115,12 @@ export function AppLauncherPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const { currentTenant } = useTenant()
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
+
+  const handleLogout = () => {
+    logout()
+    navigate("/login")
+  }
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["app-launcher", currentTenant?.id],
@@ -237,6 +243,15 @@ export function AppLauncherPage() {
                   Admin
                 </Button>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
+              </Button>
             </div>
           </div>
         </div>
