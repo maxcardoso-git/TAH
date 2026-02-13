@@ -13,7 +13,11 @@ class ApplicationBase(BaseSchema):
 
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
+    logo_url: str | None = None
+    icon: str | None = None
     base_url: str = Field(..., description="Base URL for the application API")
+    callback_url: str | None = None
+    launch_url: str | None = None
     features_manifest_url: str | None = Field(
         None,
         description="Custom URL for features manifest. If empty, uses {base_url}/api/v1/app-features/manifest",
@@ -42,6 +46,10 @@ class ApplicationCreate(ApplicationBase):
         pattern=r"^[a-z0-9_]+$",
         description="Unique application identifier (e.g., orchestrator_ai)",
     )
+    app_catalog_id: str = Field(..., description="App catalog entry ID")
+    tenant_id: UUID | None = Field(None, description="Tenant ID (defaults to token tenant)")
+    # Override: name is optional on create — falls back to catalog name
+    name: str | None = Field(None, max_length=255)
 
 
 class ApplicationUpdate(BaseSchema):
@@ -49,7 +57,11 @@ class ApplicationUpdate(BaseSchema):
 
     name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
+    logo_url: str | None = None
+    icon: str | None = None
     base_url: str | None = None
+    callback_url: str | None = None
+    launch_url: str | None = None
     features_manifest_url: str | None = None
     healthcheck_url: str | None = None
     status: AppStatus | None = None
@@ -61,6 +73,8 @@ class ApplicationRead(ApplicationBase):
     """Schema for reading application data."""
 
     id: str
+    tenant_id: UUID
+    app_catalog_id: str | None = None
     status: AppStatus
     current_version: str | None = None
     created_at: datetime
@@ -68,6 +82,7 @@ class ApplicationRead(ApplicationBase):
 
     # Computed fields
     permissions_count: int | None = None
+    features_count: int | None = None
     last_sync_at: datetime | None = None
     sync_status: str | None = None
 
@@ -140,3 +155,31 @@ class PermissionSyncResponse(BaseSchema):
     app_version: str | None = None
     summary: dict = Field(default_factory=dict)
     error_message: str | None = None
+
+
+class AppLauncherItem(BaseSchema):
+    """Application entry shown in TAH app launcher."""
+
+    id: str
+    name: str
+    description: str | None = None
+    icon: str | None = None
+    logo_url: str | None = None
+    base_url: str
+    launch_url: str | None = None
+    callback_url: str | None = None
+    status: AppStatus
+    category: str | None = None
+
+
+class AppLauncherResponse(BaseSchema):
+    """Launcher payload scoped to current user and tenant."""
+
+    tenant_id: str
+    tenant_name: str
+    current_user_id: str | None = None
+    current_user_name: str | None = None
+    current_user_email: str | None = None
+    current_user_roles: list[str] = Field(default_factory=list)
+    can_access_admin: bool = False
+    applications: list[AppLauncherItem] = Field(default_factory=list)

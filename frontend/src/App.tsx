@@ -22,7 +22,7 @@ import { AppLauncherPage } from '@/features/launcher/pages/app-launcher'
 import { HowItWorksPage } from '@/features/docs/pages/how-it-works'
 
 function ProtectedRoutes() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, user } = useAuth()
 
   if (isLoading) {
     return (
@@ -35,6 +35,10 @@ function ProtectedRoutes() {
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
+
+  const canAccessTahAdmin = Boolean(
+    user?.permissions?.some((permission) => permission.startsWith('tah.'))
+  )
 
   return (
     <TenantProvider>
@@ -52,6 +56,7 @@ function ProtectedRoutes() {
         <Route
           path="*"
           element={
+            canAccessTahAdmin ? (
             <Shell>
               <Routes>
                 {/* Tenants */}
@@ -83,6 +88,9 @@ function ProtectedRoutes() {
                 <Route path="*" element={<Navigate to="/apps" replace />} />
               </Routes>
             </Shell>
+            ) : (
+              <Navigate to="/apps" replace />
+            )
           }
         />
       </Routes>

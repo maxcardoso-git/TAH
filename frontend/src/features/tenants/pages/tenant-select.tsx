@@ -33,7 +33,7 @@ export function TenantSelectPage() {
 
   const handleSelectTenant = (tenant: Tenant) => {
     setCurrentTenant(tenant)
-    navigate(`/tenants/${tenant.id}`)
+    navigate('/apps')
   }
 
   // Auto-redirect if only one tenant
@@ -41,7 +41,7 @@ export function TenantSelectPage() {
     if (data?.items && data.items.length === 1) {
       const tenant = data.items[0]
       setCurrentTenant(tenant)
-      navigate(`/tenants/${tenant.id}`, { replace: true })
+      navigate('/apps', { replace: true })
     }
   }, [data, setCurrentTenant, navigate])
 

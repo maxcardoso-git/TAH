@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentTenantId, CurrentUserId, DbSession, get_token_payload
 from app.config import settings
-from app.core.exceptions import BadRequestError, NotFoundError, UnauthorizedError
+from app.core.exceptions import BadRequestError, ForbiddenError, NotFoundError, UnauthorizedError
 from app.core.security import (
     decode_token,
     TokenPayload,
@@ -67,37 +67,48 @@ async def login(db: DbSession, data: LoginRequest):
     if user.status != "active":
         raise UnauthorizedError(detail="Usuário inativo. Entre em contato com o administrador.")
 
-    # Get user's roles and permissions for the tenant (if provided)
-    roles: list[str] = ["admin"]  # Default admin for dev
-    permissions: list[str] = ["*"]
+    # Resolve tenant context (explicit tenant_id or first active membership)
+    resolved_tenant_id: UUID | None = data.tenant_id
+    if not resolved_tenant_id:
+        resolved_tenant_id = await db.scalar(
+            select(UserTenant.tenant_id).where(
+                UserTenant.user_id == user.id,
+                UserTenant.status == UserTenantStatus.ACTIVE,
+            ).limit(1)
+        )
 
-    if data.tenant_id:
+    # Get user's roles and permissions for the resolved tenant
+    roles: list[str] = []
+    permissions: list[str] = []
+
+    if resolved_tenant_id:
         # Check if user is member of tenant
         membership = await db.scalar(
             select(UserTenant).where(
                 UserTenant.user_id == user.id,
-                UserTenant.tenant_id == data.tenant_id,
+                UserTenant.tenant_id == resolved_tenant_id,
+                UserTenant.status == UserTenantStatus.ACTIVE,
             )
         )
         if not membership:
-            raise NotFoundError(detail=f"Usuário não é membro do tenant {data.tenant_id}")
+            raise NotFoundError(detail=f"Usuário não é membro do tenant {resolved_tenant_id}")
 
         # Get user's roles in this tenant
         roles_query = (
             select(Role.name)
             .join(UserRole)
             .where(
-                UserRole.tenant_id == data.tenant_id,
+                UserRole.tenant_id == resolved_tenant_id,
                 UserRole.user_id == user.id,
                 Role.deleted_at.is_(None),
             )
         )
         roles_result = await db.execute(roles_query)
-        roles = list(roles_result.scalars().all()) or ["user"]
+        roles = list(roles_result.scalars().all())
 
         # Get permissions from roles
         role_ids_query = select(UserRole.role_id).where(
-            UserRole.tenant_id == data.tenant_id,
+            UserRole.tenant_id == resolved_tenant_id,
             UserRole.user_id == user.id,
         )
         role_ids_result = await db.execute(role_ids_query)
@@ -113,9 +124,13 @@ async def login(db: DbSession, data: LoginRequest):
     # Create tokens
     access_token = create_access_token(
         subject=str(user.id),
-        tenant_id=str(data.tenant_id) if data.tenant_id else None,
+        tenant_id=str(resolved_tenant_id) if resolved_tenant_id else None,
         roles=roles,
         permissions=permissions,
+        additional_claims={
+            "email": user.email,
+            "name": user.display_name,
+        },
     )
 
     refresh_token = create_refresh_token(subject=str(user.id))
@@ -174,6 +189,10 @@ async def accept_invite(db: DbSession, data: AcceptInviteRequest):
         tenant_id=str(user_tenant.tenant_id),
         roles=["user"],  # Default role for new users
         permissions=[],
+        additional_claims={
+            "email": user.email,
+            "name": user.display_name,
+        },
     )
 
     refresh_token = create_refresh_token(subject=str(user.id))
@@ -221,6 +240,10 @@ async def create_dev_token(db: DbSession):
         tenant_id=None,
         roles=["admin"],
         permissions=["*"],
+        additional_claims={
+            "email": user.email,
+            "name": user.display_name,
+        },
     )
 
     refresh_token = create_refresh_token(subject=str(user.id))
@@ -349,6 +372,9 @@ async def get_available_apps(
     
     tenant_id = effective_tenant_id
     user_id = UUID(token.user_id)
+    user = await db.get(User, user_id)
+    if not user:
+        raise NotFoundError(detail="User not found")
     
     # Get tenant info
     tenant = await db.get(Tenant, tenant_id)
@@ -360,25 +386,62 @@ async def get_available_apps(
         select(UserTenant).where(
             UserTenant.user_id == user_id,
             UserTenant.tenant_id == tenant_id,
+            UserTenant.status == UserTenantStatus.ACTIVE,
         )
     )
     if not membership:
         raise NotFoundError(detail="User is not a member of this tenant")
     
-    # Get enabled applications for this tenant
-    query = (
-        select(Application, AppCatalog.category)
-        .join(TenantApplication, TenantApplication.application_id == Application.id).outerjoin(AppCatalog, AppCatalog.id == Application.app_catalog_id)
+    # Resolve roles + permissions for this tenant
+    roles_query = (
+        select(Role.name)
+        .join(UserRole)
         .where(
-            TenantApplication.tenant_id == tenant_id,
-            TenantApplication.status == AppStatus.ACTIVE,
-            Application.status == AppStatus.ACTIVE,
+            UserRole.tenant_id == tenant_id,
+            UserRole.user_id == user_id,
+            Role.deleted_at.is_(None),
         )
-        .order_by(Application.name)
     )
-    
-    result = await db.execute(query)
-    applications = result.all()
+    roles_result = await db.execute(roles_query)
+    role_names = list(roles_result.scalars().all())
+
+    role_ids_query = select(UserRole.role_id).where(
+        UserRole.tenant_id == tenant_id,
+        UserRole.user_id == user_id,
+    )
+    role_ids_result = await db.execute(role_ids_query)
+    role_ids = list(role_ids_result.scalars().all())
+
+    allowed_app_ids: set[str] = set()
+    granted_permissions: set[str] = set()
+    if role_ids:
+        perms_query = select(
+            RolePermission.application_id,
+            RolePermission.permission_key,
+        ).where(RolePermission.role_id.in_(role_ids))
+        perms_result = await db.execute(perms_query)
+        for app_id, permission_key in perms_result.all():
+            if app_id:
+                allowed_app_ids.add(app_id)
+            if permission_key:
+                granted_permissions.add(permission_key)
+
+    applications: list[tuple[Application, str | None]] = []
+    if allowed_app_ids:
+        query = (
+            select(Application, AppCatalog.category)
+            .join(TenantApplication, TenantApplication.application_id == Application.id)
+            .outerjoin(AppCatalog, AppCatalog.id == Application.app_catalog_id)
+            .where(
+                TenantApplication.tenant_id == tenant_id,
+                TenantApplication.status == AppStatus.ACTIVE,
+                Application.status == AppStatus.ACTIVE,
+                Application.id.in_(allowed_app_ids),
+            )
+            .order_by(Application.name)
+        )
+        result = await db.execute(query)
+        applications = result.all()
     
     # Convert to launcher items
     app_items = [
@@ -396,10 +459,16 @@ async def get_available_apps(
         )
         for app, category in applications
     ]
-    
+    can_access_admin = any(permission_key.startswith("tah.") for permission_key in granted_permissions)
+
     return AppLauncherResponse(
         tenant_id=str(tenant_id),
         tenant_name=tenant.name,
+        current_user_id=str(user.id),
+        current_user_name=user.display_name,
+        current_user_email=user.email,
+        current_user_roles=role_names,
+        can_access_admin=can_access_admin,
         applications=app_items,
     )
 
@@ -439,6 +508,7 @@ async def create_application_token(
         select(UserTenant).where(
             UserTenant.user_id == user_id,
             UserTenant.tenant_id == tenant_id,
+            UserTenant.status == UserTenantStatus.ACTIVE,
         )
     )
     if not membership:
@@ -474,6 +544,8 @@ async def create_application_token(
         )
         perms_result = await db.execute(perms_query)
         permissions = list(set(perms_result.scalars().all()))
+    if not permissions:
+        raise ForbiddenError(detail="User has no access to this application")
     # Look up org_id mapping for this tenant + application
     org_mapping = await db.scalar(
         select(TenantAppOrgMapping).where(
@@ -632,6 +704,10 @@ async def refresh_token(db: DbSession, data: RefreshTokenRequest):
         tenant_id=str(tenant_id) if tenant_id else None,
         roles=roles,
         permissions=permissions,
+        additional_claims={
+            "email": user.email,
+            "name": user.display_name,
+        },
     )
     
     # Issue new refresh token (token rotation for security)
@@ -732,6 +808,10 @@ async def set_first_password(db: DbSession, data: SetPasswordRequest):
         tenant_id=str(tenant_id) if tenant_id else None,
         roles=roles,
         permissions=permissions,
+        additional_claims={
+            "email": user.email,
+            "name": user.display_name,
+        },
     )
     
     refresh_token = create_refresh_token(subject=str(user.id))

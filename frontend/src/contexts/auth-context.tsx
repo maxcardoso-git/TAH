@@ -6,6 +6,7 @@ interface User {
   display_name: string | null
   tenant_id: string | null
   roles: string[]
+  permissions: string[]
 }
 
 interface AuthContextType {
@@ -29,6 +30,7 @@ function decodeToken(token: string): User | null {
       display_name: payload.name || null,
       tenant_id: payload.tenant_id || null,
       roles: payload.roles || [],
+      permissions: payload.permissions || [],
     }
   } catch {
     return null

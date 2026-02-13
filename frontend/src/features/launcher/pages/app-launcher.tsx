@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom"
 import { useTenant } from "@/contexts/tenant-context"
+import { useAuth } from "@/contexts/auth-context"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import apiClient from "@/api/client"
 import { Button } from "@/components/ui/button"
@@ -16,7 +17,8 @@ import {
   Shield,
   Database,
   Cog,
-  Sparkles
+  Sparkles,
+  User,
 } from "lucide-react"
 
 interface AppLauncherItem {
@@ -35,6 +37,11 @@ interface AppLauncherItem {
 interface AppLauncherResponse {
   tenant_id: string
   tenant_name: string
+  current_user_id?: string | null
+  current_user_name?: string | null
+  current_user_email?: string | null
+  current_user_roles?: string[]
+  can_access_admin?: boolean
   applications: AppLauncherItem[]
 }
 
@@ -107,6 +114,7 @@ export function AppLauncherPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const { currentTenant } = useTenant()
+  const { user } = useAuth()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["app-launcher", currentTenant?.id],
@@ -163,9 +171,13 @@ export function AppLauncherPage() {
   }
 
   if (!currentTenant) {
-    navigate("/tenants")
+    navigate("/select-tenant")
     return null
   }
+
+  const canAccessAdmin = Boolean(data?.can_access_admin)
+  const userDisplayName = data?.current_user_name || user?.display_name || user?.email || "User"
+  const currentRoles = data?.current_user_roles || []
 
   if (isLoading) {
     return (
@@ -204,15 +216,28 @@ export function AppLauncherPage() {
                 <p className="text-sm text-muted-foreground">Application Launcher</p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => navigate(`/tenants/${data?.tenant_id}`)}
-              className="gap-2"
-            >
-              <Settings className="h-4 w-4" />
-              Admin
-            </Button>
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
+                <User className="h-4 w-4" />
+                <span>{userDisplayName}</span>
+                {currentRoles.length > 0 && (
+                  <Badge variant="secondary">
+                    {currentRoles.join(" · ")}
+                  </Badge>
+                )}
+              </div>
+              {canAccessAdmin && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/tenants/${data?.tenant_id}`)}
+                  className="gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  Admin
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </header>

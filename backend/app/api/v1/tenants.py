@@ -10,7 +10,7 @@ from app.core.exceptions import ConflictError, NotFoundError
 from app.core.security import TokenPayload
 from app.models.role import Role
 from app.models.tenant import Tenant, TenantStatus
-from app.models.user import UserTenant
+from app.models.user import UserTenant, UserTenantStatus
 from app.schemas.common import PaginatedResponse
 from app.schemas.tenant import TenantCreate, TenantRead, TenantUpdate
 
@@ -20,15 +20,25 @@ router = APIRouter()
 @router.get("", response_model=PaginatedResponse[TenantRead])
 async def list_tenants(
     db: DbSession,
-    _: Annotated[TokenPayload, Depends(get_token_payload)],
+    token: Annotated[TokenPayload, Depends(get_token_payload)],
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     status_filter: TenantStatus | None = Query(default=None, alias="status"),
     search: str | None = Query(default=None, max_length=100),
 ):
-    """List all tenants with pagination and filtering."""
-    # Build query
-    query = select(Tenant).where(Tenant.deleted_at.is_(None))
+    """List tenant memberships available to the current user."""
+    user_id = UUID(token.user_id)
+
+    # Build query scoped to active user membership
+    query = (
+        select(Tenant)
+        .join(UserTenant, UserTenant.tenant_id == Tenant.id)
+        .where(
+            Tenant.deleted_at.is_(None),
+            UserTenant.user_id == user_id,
+            UserTenant.status == UserTenantStatus.ACTIVE,
+        )
+    )
 
     if status_filter:
         query = query.where(Tenant.status == status_filter)
@@ -92,10 +102,22 @@ async def create_tenant(
 @router.get("/{tenant_id}", response_model=TenantRead)
 async def get_tenant(
     db: DbSession,
-    _: Annotated[TokenPayload, Depends(get_token_payload)],
+    token: Annotated[TokenPayload, Depends(get_token_payload)],
     tenant_id: UUID,
 ):
     """Get tenant by ID."""
+    user_id = UUID(token.user_id)
+
+    membership = await db.scalar(
+        select(UserTenant).where(
+            UserTenant.tenant_id == tenant_id,
+            UserTenant.user_id == user_id,
+            UserTenant.status == UserTenantStatus.ACTIVE,
+        )
+    )
+    if not membership:
+        raise NotFoundError(detail=f"Tenant {tenant_id} not found")
+
     tenant = await db.get(Tenant, tenant_id)
 
     if not tenant or tenant.deleted_at:
@@ -119,11 +141,22 @@ async def get_tenant(
 @router.patch("/{tenant_id}", response_model=TenantRead)
 async def update_tenant(
     db: DbSession,
-    _: Annotated[TokenPayload, Depends(get_token_payload)],
+    token: Annotated[TokenPayload, Depends(get_token_payload)],
     tenant_id: UUID,
     data: TenantUpdate,
 ):
     """Update an existing tenant."""
+    user_id = UUID(token.user_id)
+    membership = await db.scalar(
+        select(UserTenant).where(
+            UserTenant.tenant_id == tenant_id,
+            UserTenant.user_id == user_id,
+            UserTenant.status == UserTenantStatus.ACTIVE,
+        )
+    )
+    if not membership:
+        raise NotFoundError(detail=f"Tenant {tenant_id} not found")
+
     tenant = await db.get(Tenant, tenant_id)
 
     if not tenant or tenant.deleted_at:
@@ -151,10 +184,21 @@ async def update_tenant(
 @router.delete("/{tenant_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_tenant(
     db: DbSession,
-    _: Annotated[TokenPayload, Depends(get_token_payload)],
+    token: Annotated[TokenPayload, Depends(get_token_payload)],
     tenant_id: UUID,
 ):
     """Soft delete a tenant."""
+    user_id = UUID(token.user_id)
+    membership = await db.scalar(
+        select(UserTenant).where(
+            UserTenant.tenant_id == tenant_id,
+            UserTenant.user_id == user_id,
+            UserTenant.status == UserTenantStatus.ACTIVE,
+        )
+    )
+    if not membership:
+        raise NotFoundError(detail=f"Tenant {tenant_id} not found")
+
     tenant = await db.get(Tenant, tenant_id)
 
     if not tenant or tenant.deleted_at:
