@@ -91,6 +91,44 @@ def create_refresh_token(
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
 
+def create_app_token(
+    subject: str | UUID,
+    email: str,
+    name: str,
+    tenant_id: str | UUID,
+    org_id: str,
+    roles: list[str] | None,
+    permissions: list[str] | None,
+    audience: str,
+    expires_delta: timedelta | None = None,
+) -> str:
+    """Create an application-scoped JWT used by TAH app launcher callbacks."""
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+
+    to_encode: dict[str, Any] = {
+        "sub": str(subject),
+        "email": email,
+        "name": name,
+        "tenant_id": str(tenant_id),
+        "org_id": org_id,
+        "roles": roles or [],
+        "permissions": permissions or [],
+        "aud": audience,
+        "exp": expire,
+        "iat": datetime.utcnow(),
+        "type": "app_access",
+    }
+
+    issuer = getattr(settings, "jwt_issuer", None)
+    if issuer:
+        to_encode["iss"] = issuer
+
+    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+
+
 def decode_token(token: str) -> dict[str, Any]:
     """
     Decode and validate a JWT token.
