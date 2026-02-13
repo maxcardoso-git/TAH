@@ -48,8 +48,11 @@ async def login(db: DbSession, data: LoginRequest):
     Login with email and password.
     Returns a JWT token for the user.
     """
+    normalized_email = data.email.strip().lower()
+    normalized_password = data.password.strip()
+
     # Find user by email
-    result = await db.execute(select(User).where(User.email == data.email))
+    result = await db.execute(select(User).where(User.email == normalized_email))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -60,7 +63,7 @@ async def login(db: DbSession, data: LoginRequest):
         raise UnauthorizedError(detail="Usuário não configurou senha. Verifique seu convite.")
 
     # Verify password
-    if not verify_password(data.password, user.password_hash):
+    if not verify_password(normalized_password, user.password_hash):
         raise UnauthorizedError(detail="Email ou senha inválidos")
 
     # Check user status
