@@ -30,14 +30,21 @@ const apiClient: AxiosInstance = axios.create({
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
+    const requestUrl = config.url || ''
+    const isAuthBootstrapRequest =
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/dev-token') ||
+      requestUrl.includes('/auth/accept-invite') ||
+      requestUrl.includes('/auth/refresh')
+
     const token = localStorage.getItem('access_token')
-    if (token) {
+    if (token && !isAuthBootstrapRequest) {
       config.headers.Authorization = `Bearer ${token}`
     }
 
     // Add tenant header if available
     const tenantId = localStorage.getItem('current_tenant_id')
-    if (tenantId) {
+    if (tenantId && !isAuthBootstrapRequest) {
       config.headers['X-Tenant-ID'] = tenantId
     }
 
