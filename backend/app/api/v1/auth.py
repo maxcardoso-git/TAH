@@ -48,7 +48,7 @@ async def login(db: DbSession, data: LoginRequest):
     Login with email and password.
     Returns a JWT token for the user.
     """
-    normalized_email = data.email.strip().lower()
+    normalized_email = "".join(data.email.split()).lower()
     normalized_password = data.password.strip()
 
     # Find user by email
