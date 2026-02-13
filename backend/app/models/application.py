@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 if TYPE_CHECKING:
+    from app.models.app_catalog import AppCatalog
     from app.models.app_feature import AppFeature
     from app.models.external_permission import ExternalPermission
     from app.models.tenant import Tenant
@@ -28,9 +29,25 @@ class Application(Base):
     __tablename__ = "applications"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
+    tenant_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    app_catalog_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("app_catalog.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(String)
+    logo_url: Mapped[str | None] = mapped_column(String)
+    icon: Mapped[str | None] = mapped_column(String)
     base_url: Mapped[str] = mapped_column(String, nullable=False)
+    callback_url: Mapped[str | None] = mapped_column(String)
+    launch_url: Mapped[str | None] = mapped_column(String)
     features_manifest_url: Mapped[str | None] = mapped_column(
         String,
         nullable=True,
@@ -68,6 +85,11 @@ class Application(Base):
     )
 
     # Relationships
+    catalog: Mapped["AppCatalog | None"] = relationship(
+        "AppCatalog",
+        back_populates="tenant_applications",
+        foreign_keys=[app_catalog_id],
+    )
     tenant_applications: Mapped[list["TenantApplication"]] = relationship(
         "TenantApplication",
         back_populates="application",
@@ -83,6 +105,18 @@ class Application(Base):
         back_populates="application",
         cascade="all, delete-orphan",
     )
+
+    @property
+    def display_name(self) -> str:
+        return self.name or (self.catalog.name if self.catalog else self.id)
+
+    @property
+    def display_description(self) -> str | None:
+        return self.description or (self.catalog.description if self.catalog else None)
+
+    @property
+    def display_logo_url(self) -> str | None:
+        return self.logo_url or (self.catalog.logo_url if self.catalog else None)
 
     def __repr__(self) -> str:
         return f"<Application(id={self.id}, name={self.name})>"
