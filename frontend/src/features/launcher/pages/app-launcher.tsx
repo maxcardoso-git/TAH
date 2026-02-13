@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useTenant } from "@/contexts/tenant-context"
 import { useAuth } from "@/contexts/auth-context"
@@ -184,6 +185,20 @@ export function AppLauncherPage() {
   const canAccessAdmin = Boolean(data?.can_access_admin)
   const userDisplayName = data?.current_user_name || user?.display_name || user?.email || "User"
   const currentRoles = data?.current_user_roles || []
+
+  useEffect(() => {
+    if (!currentTenant?.id) {
+      return
+    }
+    try {
+      const raw = localStorage.getItem("tah_admin_access_by_tenant")
+      const current = raw ? (JSON.parse(raw) as Record<string, boolean>) : {}
+      current[currentTenant.id] = canAccessAdmin
+      localStorage.setItem("tah_admin_access_by_tenant", JSON.stringify(current))
+    } catch {
+      // ignore storage issues
+    }
+  }, [currentTenant?.id, canAccessAdmin])
 
   if (isLoading) {
     return (

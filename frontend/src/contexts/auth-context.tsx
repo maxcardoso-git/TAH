@@ -118,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     localStorage.removeItem('current_tenant_id')
+    localStorage.removeItem('tah_admin_access_by_tenant')
     setToken(null)
     setUser(null)
   }

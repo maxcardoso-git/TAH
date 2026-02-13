@@ -36,9 +36,23 @@ function ProtectedRoutes() {
     return <Navigate to="/login" replace />
   }
 
-  const canAccessTahAdmin = Boolean(
+  const tokenCanAccessTahAdmin = Boolean(
     user?.permissions?.some((permission) => permission.startsWith('tah.'))
   )
+
+  let tenantCanAccessTahAdmin = false
+  const currentTenantId = localStorage.getItem('current_tenant_id')
+  const tenantAccessRaw = localStorage.getItem('tah_admin_access_by_tenant')
+  if (currentTenantId && tenantAccessRaw) {
+    try {
+      const tenantAccess = JSON.parse(tenantAccessRaw) as Record<string, boolean>
+      tenantCanAccessTahAdmin = Boolean(tenantAccess[currentTenantId])
+    } catch {
+      tenantCanAccessTahAdmin = false
+    }
+  }
+
+  const canAccessTahAdmin = tokenCanAccessTahAdmin || tenantCanAccessTahAdmin
 
   return (
     <TenantProvider>
