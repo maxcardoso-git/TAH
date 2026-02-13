@@ -56,12 +56,15 @@ apiClient.interceptors.response.use(
 
     // If 401 and we haven't retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
-      // Check if this is the refresh endpoint itself
-      if (originalRequest.url?.includes('/auth/refresh')) {
+      // Never attempt refresh for auth endpoints that are part of the login flow
+      if (
+        originalRequest.url?.includes('/auth/refresh') ||
+        originalRequest.url?.includes('/auth/login') ||
+        originalRequest.url?.includes('/auth/accept-invite')
+      ) {
         // Refresh failed, logout
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
-        window.location.href = '/login'
         return Promise.reject(error)
       }
 
