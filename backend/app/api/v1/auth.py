@@ -20,7 +20,7 @@ from app.core.security import (
 )
 from app.models.role import Role, RolePermission
 from app.models.user import User, UserRole, UserTenant, UserTenantStatus
-from app.models.application import Application, TenantApplication, TenantAppOrgMapping, AppStatus
+from app.models.application import Application, TenantApplication, AppStatus
 from app.models.app_catalog import AppCatalog
 from app.models.tenant import Tenant
 from app.schemas.application import AppLauncherItem, AppLauncherResponse
@@ -546,15 +546,8 @@ async def create_application_token(
         permissions = list(set(perms_result.scalars().all()))
     if not permissions:
         raise ForbiddenError(detail="User has no access to this application")
-    # Look up org_id mapping for this tenant + application
-    org_mapping = await db.scalar(
-        select(TenantAppOrgMapping).where(
-            TenantAppOrgMapping.tenant_id == tenant_id,
-            TenantAppOrgMapping.application_id == data.application_id,
-        )
-    )
-    # Use mapped org_id if exists, otherwise fallback to tenant_id
-    org_id = org_mapping.remote_org_id if org_mapping else str(tenant_id)
+    # Fallback: use tenant_id as org_id when no mapping model is available.
+    org_id = str(tenant_id)
 
     
     # Create RS256 token for the application
